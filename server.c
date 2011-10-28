@@ -91,22 +91,32 @@ int main(int argc, char *argv[]) {
 int listen_loop(int socketfd) {
 	socklen_t sin_size;
 	struct sockaddr_storage client_addr;
-	int client_fd;
+	int client_fd, num_bytes;
+
+	char buf[100];
 
 	while (1) {
 		sin_size = sizeof client_addr;
 		client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
-
-		printf("Connection.\n");
 
 		if (client_fd == -1) {
 			perror("accept");
 			continue;
 		}
 
-		if (send(client_fd, "Hello, world!", 13, 0) == -1) {
-			perror("send");
+		if ((num_bytes = recv(client_fd, buf, 99, 0)) == -1)
+			perror("recv");
+		buf[num_bytes] = '\0';
+
+		if (strcmp(buf, "hey")) {
+			fprintf(stderr, "Didn't get a 'hey'");
+			close(client_fd);
+			continue;
 		}
+
+		if (send(client_fd, "whatsup", 7, 0) == -1) 
+			perror("send");
+
 		close(client_fd);
 	}
 
