@@ -2,5 +2,7 @@
 #define CLIENT_H
 
 int recv_loop(int socketfd);
+void parse_two(char *s, int *x, int *y);
+void parse_three(char *s, int *x, int *y, float *t);
 
 #endif

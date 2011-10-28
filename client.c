@@ -76,10 +76,9 @@ int main(int argc, char *argv[]) {
 
 int recv_loop(int socketfd) {
 	char buf[LINE];
-	char tmp[LINE];
-	int i, j, numbytes;
+	int i, numbytes;
 
-	int x, y, num_heat;
+	int x, y, query_x, query_y, num_heat;
 	struct heatpoint *hps;
 
 	while (1) {
@@ -93,46 +92,30 @@ int recv_loop(int socketfd) {
 #endif
 
 		if (!strcmp("whatsup", buf)) {
-			printf("Enter 'X Y' dimension of surface: ");
+			printf("Enter 'X Y' dimension of surface: \n");
 			fgets(buf, LINE, stdin);
 			
-			for (i = 0; i < LINE; i++) {
-				if (buf[i] != ' ')
-					tmp[i] = buf[i];
-				else
-					break;
-			}
-			tmp[++i] = '\0';
-			x = atoi(tmp);
-
-			for (i = 0; i < LINE; i++) {
-				if (buf[i] != ' ')
-					tmp[i] = buf[i];
-				else
-					break;
-			}
-			tmp[++i] = '\0';
-			y = atoi(tmp);
+			parse_two(buf, &x, &y);
 
 			if (x < 10 || x > 2000) {
-				fprintf(stderr, "Width must be 10 <= w <= 20000");
+				fprintf(stderr, "Width must be 10 <= w <= 20000\n");
 				return 5;
 			}
 			if (y < 10 || y > 20000) {
-				fprintf(stderr, "Height must be 10 <= h <= 20000");
+				fprintf(stderr, "Height must be 10 <= h <= 20000\n");
 				return 6;
 			}
 
 #if DEBUG > 0
-			printf("X: %d Y: %d", x, y);
+			printf("X: %d Y: %d\n", x, y);
 #endif
 
-			printf("Enter number of heat sources: ");
+			printf("Enter number of heat sources: \n");
 			fgets(buf, LINE, stdin);
 			num_heat = atoi(buf);
 
 			if (num_heat < 4 || num_heat > 20) {
-				fprintf(stderr, "Number of heat sources must be 4 <= num heat <= 20");
+				fprintf(stderr, "Number of heat sources must be 4 <= num heat <= 20\n");
 				return 7;
 			}
 
@@ -141,38 +124,37 @@ int recv_loop(int socketfd) {
 			for (i = 0; i < num_heat; i++) {
 				fgets(buf, LINE, stdin);
 
-				for (j = 0; j < LINE; j++) {
-					if (buf[j] != ' ')
-						tmp[j] = buf[j];
-					else
-						break;
-				}
-				tmp[++j] = '\0';
-				hps[i].x = atoi(tmp);
+				parse_three(buf, &(hps[i].x), &(hps[i].y), &(hps[i].t));
+#if DEBUG > 0
+				printf("HP X: %d HP Y: %d HP T: %f\n", hps[i].x, hps[i].y, hps[i].t);
+#endif
 
-				for (j = 0; j < LINE; j++) {
-					if (buf[j] != ' ')
-						tmp[j] = buf[j];
-					else
-						break;
+				if (hps[i].x < 0 || hps[i].x > x) {
+					fprintf(stderr, "Heat point x coordinate is not on grid\n");
+					return 8;
 				}
-				tmp[++j] = '\0';
-				hps[i].y = atoi(tmp);
 
-				for (j = 0; j < LINE; j++) {
-					if (buf[j] != ' ')
-						tmp[j] = buf[j];
-					else
-						break;
+				if (hps[i].y < 0 || hps[i].y > y) {
+					fprintf(stderr, "Heat point y coordinate is not on grid\n");
+					return 9;
 				}
-				tmp[++j] = '\0';
-				hps[i].t = atof(tmp);
+
+				if (hps[i].t < -100 || hps[i].t > 500) {
+					fprintf(stderr, "Heat point temperature must be -100 <= t <= 500\n");
+					return 10;
+				}
 			}
 
 #if DEBUG > 0
 			for (i = 0; i < num_heat; i++)
-				printf("x: %d y:%d t:%f", hps[i].x, hps[i].y, hps[i].t);
+				printf("x: %d y:%d t:%f\n", hps[i].x, hps[i].y, hps[i].t);
 #endif
+
+			printf("Point ('X Y') to query?\n");
+			fgets(buf, LINE, stdin);
+
+			parse_two(buf, &query_x, &query_y);
+
 			return 22;
 
 		} else {
@@ -181,4 +163,74 @@ int recv_loop(int socketfd) {
 
 	}
 
+}
+
+void parse_two(char *s, int *x, int *y) {
+	int j, i = 0;
+	char tmp[LINE];
+
+	for (j = 0; i < LINE; i++) {
+		if (s[i] != ' ')
+			tmp[j] = s[i];
+		else
+			break;
+		j++;
+	}
+	tmp[j] = '\0';
+	i++;
+	*x = atoi(tmp);
+
+	for (j = 0; i < LINE; i++) {
+		if (s[i] != '\n')
+			tmp[j] = s[i];
+		else
+			break;
+		j++;
+	}
+	tmp[j] = '\0';
+	*y = atoi(tmp);
+}
+
+void parse_three(char *s, int *x, int *y, float *t) {
+	int i, j;
+	char tmp[LINE];
+
+	printf("s: %s\n", s);
+
+	i = 0;
+	for (j = 0; i < LINE; i++) {
+		if (s[i] != ' ')
+			tmp[j] = s[i];
+		else
+			break;
+		j++;
+	}
+	tmp[j] = '\0';
+	i++;
+	*x = atoi(tmp);
+
+	for (j = 0; i < LINE; i++) {
+		printf("s[i]: %c\n", s[i]);
+
+		if (s[i] != ' ')
+			tmp[j] = s[i];
+		else
+			break;
+		j++;
+	}
+	tmp[j] = '\0';
+	printf("tmp: %s\n", tmp);
+	i++;
+	*y = atoi(tmp);
+
+	for (j = 0; i < LINE; i++) {
+		if (s[i] != '\n')
+			tmp[j] = s[i];
+		else
+			break;
+		j++;
+	}
+	tmp[j] = '\0';
+	i++;
+	*t = atof(tmp);
 }
