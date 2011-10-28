@@ -1,23 +1,32 @@
 #include "temps.h"
-#include "common.c"
-#include "stdio.h"
 
 int main(int argc, char *argv[]) {
 
-  int i;
+  struct heatpoint heatpoints[2];
 
   /*What do I need these for? Goddamn nothing*/
   if(argc!=0){
     argv[argc-1] = "";
   }
 
-  init_sheet(10,5);
-  for(i=0; i<10; i++){
-    step_sheet();
-    print_sheet();
-    step_sheet();
-    print_sheet();
+  heatpoints[0].x = 3;
+  heatpoints[0].y = 3;
+  heatpoints[0].t = 100;
+  heatpoints[1].x = 7;
+  heatpoints[1].y = 7;
+  heatpoints[1].t = 100;
+
+  init_sheet(10,10,heatpoints,2,5,5);
+  printf("%d %d %d %d\n", t_x, x, t_y, y);
+
+  while((iteration < 5000)
+	&& (terminate_sheet_check() != 1)){
+      step_sheet();
   }
+
+  printf("Finished after %d iterations\nFinal state is:\n",iteration);
+  print_sheet();
+  printf("Target (%d,%d) terminated with value %f\n",t_x,t_y,query_sheet(t_x,t_y));
   return 0;
 }
 
@@ -59,24 +68,24 @@ void* step_sheet(){
 
    returns true if it is time to go, false otherwise
 */
-int terminate_sheet_check(int x_val, int y_val){
-  /* If x or y is out of bounds return false */
-  if(x_val < x && y_val < y){
+int terminate_sheet_check(){
+  float delta;
+  delta = sheet[t_x][t_y]-prev_sheet[t_x][t_y];
+  /*
+  printf("Terminate check %f %f %f \n",sheet[t_x][t_y],
+	 prev_sheet[t_x][t_y],delta);
+  */
+  /* If the curr value is equal to the present value return false */
+  if(delta == 0){
     return 0;
+  }    
+  /* If the delta value is less than the terminate value, return true */
+  else if(delta < delta_terminate){
+    return 1;
   }
   else{
-    /* If the curr value is equal to the present value return false */
-    if(sheet[x_val][y_val]==prev_sheet[x_val][y_val]){
-      return 0;
-    }    
-    /* If the delta value is less than the terminate value, return true */
-    else if((sheet[x_val][y_val]-prev_sheet[x_val][y_val]) < delta_terminate){
-      return 1;
-    }
-    else{
-      /*Else return false*/
-      return 0;
-    }
+    /*Else return false*/
+    return 0;
   }
 }
 
@@ -115,7 +124,7 @@ void* reset_sheet(){
 
   /* Reset constant heat sources */
   for(i=0; i<num_sources; i++){
-    sheet[heat_sources[i][0]][heat_sources[i][1]] = heat_sources[i][2];
+    sheet[heat_sources[i].x][heat_sources[i].y] = heat_sources[i].t;
   }
 
   return 0;
@@ -125,16 +134,21 @@ void* reset_sheet(){
    Initializes the sheet pointer
    Creates a matrix of size (x+2,y+2)
 */
-void* init_sheet(int x_val, int y_val){
+void* init_sheet(int x_val, int y_val, 
+		 struct heatpoint * heatpoints, int num_heatpoints,
+		 int tx_val, int ty_val){
   int i, j;
 
+  /* Initialize our target point */
+  t_x = tx_val;
+  t_y = ty_val;
+
   /* Initialize constant heat sources */
-  num_sources = 1;
-  heat_sources = xmalloc(num_sources * sizeof(int*));
-  heat_sources[0] = xmalloc(3 * sizeof(int));
-  heat_sources[0][0] = 2;
-  heat_sources[0][1] = 2;
-  heat_sources[0][2] = 5;
+  num_sources = num_heatpoints;
+  heat_sources = xmalloc(num_sources * sizeof(struct heatpoint));
+  for(i=0; i<num_sources; i++){
+    heat_sources[i] = heatpoints[i];
+  }
   
   /* Initialize past and present sheets */
   x = x_val + 2;
