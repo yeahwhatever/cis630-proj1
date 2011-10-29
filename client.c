@@ -155,6 +155,10 @@ int recv_loop(int socketfd) {
 
 			parse_two(buf, &query_x, &query_y);
 
+#if DEBUG > 0
+			printf("Query point: %d, %d\n", query_x, query_y);
+#endif
+
 			return 22;
 
 		} else {
