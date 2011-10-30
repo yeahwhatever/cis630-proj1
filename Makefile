@@ -9,10 +9,10 @@ LL =
 all: client server
 
 client: client.c 
-		$(CC) client.c $(LL) $(CFLAGS) -o client
+		$(CC) client.c common.c $(LL) $(CFLAGS) -o client
 
 server: client.c
-		$(CC) server.c $(LL) $(CFLAGS) -o server
+		$(CC) server.c common.c $(LL) $(CFLAGS) -o server
 
 clean:
 		rm -rf *.o client server

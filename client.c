@@ -12,7 +12,7 @@
 #include <netdb.h>
 
 #include "client.h"
-#include "common.c"
+#include "common.h"
 
 #define LINE 100
 #define DEBUG 2
