@@ -47,13 +47,13 @@ int main(int argc, char *argv[]) {
 		return 2;
 	}
 
-    /* loop through all the results and bind to the first we can */
-    for (p = servinfo; p != NULL; p = p->ai_next) {
-        if ((socketfd = socket(p->ai_family, p->ai_socktype,
-                p->ai_protocol)) == -1) {
-            perror("server: socket");
-            continue;
-        }
+	/* loop through all the results and bind to the first we can */
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		if ((socketfd = socket(p->ai_family, p->ai_socktype,
+						p->ai_protocol)) == -1) {
+			perror("server: socket");
+			continue;
+		}
 
 		if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &yes,
 					sizeof(int)) == -1) {
@@ -122,3 +122,4 @@ int listen_loop(int socketfd) {
 
 	return 0;
 }
+

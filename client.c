@@ -62,14 +62,14 @@ int main(int argc, char *argv[]) {
 		return 3;
 	}
 
-    freeaddrinfo(servinfo); 
+	freeaddrinfo(servinfo); 
 
 	if (send(socketfd, "hey", 3, 0) == -1)
 		perror("send");
 
 	status = recv_loop(socketfd);
 
-    close(socketfd);
+	close(socketfd);
 
 	return status;
 }
@@ -94,7 +94,7 @@ int recv_loop(int socketfd) {
 		if (!strcmp("whatsup", buf)) {
 			printf("Enter 'X Y' dimension of surface: \n");
 			fgets(buf, LINE, stdin);
-			
+
 			parse_two(buf, &x, &y);
 
 			if (x < 10 || x > 2000) {
@@ -145,6 +145,7 @@ int recv_loop(int socketfd) {
 				}
 			}
 
+			mkJson(x,y,num_heat, hps);
 #if DEBUG > 0
 			for (i = 0; i < num_heat; i++)
 				printf("x: %d y:%d t:%f\n", hps[i].x, hps[i].y, hps[i].t);
@@ -234,3 +235,4 @@ void parse_three(char *s, int *x, int *y, float *t) {
 	i++;
 	*t = atof(tmp);
 }
+

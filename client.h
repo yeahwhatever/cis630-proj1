@@ -1,5 +1,6 @@
 #ifndef CLIENT_H
 #define CLIENT_H
+#include "common.h"
 
 int recv_loop(int socketfd);
 void parse_two(char *s, int *x, int *y);
