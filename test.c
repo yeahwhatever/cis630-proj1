@@ -10,7 +10,8 @@
 #define true 1
 #define bool char
 
-void parseJson(char* json, int *width, int *height, int *num_heat, struct heatpoint **hps) {
+
+struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) {
 	int len = strlen(json);
 	int i = 1;
 	int nstart;
@@ -74,7 +75,7 @@ void parseJson(char* json, int *width, int *height, int *num_heat, struct heatpo
 	}
 
 	int heatCount = 0;
-	*hps = xmalloc(sizeof(struct heatpoint) * *num_heat);
+	struct heatpoint *hps = xmalloc(sizeof(struct heatpoint) * *num_heat);
 	int j = -1;
 	bool inHp, cont;
 	inHp = getX = getY = getT = false;
@@ -123,18 +124,18 @@ void parseJson(char* json, int *width, int *height, int *num_heat, struct heatpo
 				char* numStr = xmalloc(i-nstart);
 				strncpy(numStr, json+nstart, i-nstart-1);
 				if(getX) {
-					hps[j]->x = atoi(numStr);
-					printf("j: %d, x: %d\n", j, hps[j]->x);
+					hps[j].x = atoi(numStr);
+					printf("j: %d, x: %d\n", j, hps[j].x);
 					getX = false;
 				}
 				if(getY) {
-					hps[j]->y = atoi(numStr);
-					printf("j: %d, y: %d\n", j, hps[j]->y);
+					hps[j].y = atoi(numStr);
+					printf("j: %d, y: %d\n", j, hps[j].y);
 					getY = false;
 				}
 				if(getT) {
-			       		hps[j]->t = atof(numStr);	       
-					printf("j: %d, t: %f\n", j, hps[j]->t);
+			       		hps[j].t = atof(numStr);	       
+					printf("j: %d, t: %f\n", j, hps[j].t);
 					getT = false;
 
 				}
@@ -148,10 +149,10 @@ void parseJson(char* json, int *width, int *height, int *num_heat, struct heatpo
 		}
 	}
 	for(i = 0; i < *num_heat; i++) {
-		printf("x: %d, y: %d, t: %f\n", hps[i]->x, hps[i]->y, hps[i]->t);
+		printf("x: %d, y: %d, t: %f\n", hps[i].x, hps[i].y, hps[i].t);
 	}
+	return hps;
 }
-
 int main() {
 	struct heatpoint *hps;
 	int i;
@@ -163,11 +164,10 @@ int main() {
 	}	
 	char* json = mkJson(1, 2, 5, hps);
 	int width, height, num_heat;
-	hps = NULL;
-	parseJson(json, &width, &height, &num_heat, &hps);
+	struct heatpoint *hhps = parseJson(json, &width, &height, &num_heat);
 	printf("height: %d\nwidth: %d\nnum_heat: %d\n",height, width, num_heat);
 	for(i = 0; i < num_heat; i++) {
-		printf("x: %d, y: %d, t: %f\n", hps[i].x, hps[i].y, hps[i].t);
+		printf("x: %d, y: %d, t: %f\n", hhps[i].x, hhps[i].y, hhps[i].t);
 	}
 	return 0;
 }

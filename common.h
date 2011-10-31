@@ -11,4 +11,5 @@ void* xmalloc(unsigned int size);
 
 char* mkJson(int x, int y, int num_heat, struct heatpoint *hps );
 char* mkJsonQuery(int x, int y);
+struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat);
 #endif
