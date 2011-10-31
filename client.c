@@ -12,7 +12,7 @@
 #include <netdb.h>
 
 #include "client.h"
-#include "common.c"
+#include "common.h"
 
 #define LINE 100
 #define DEBUG 2
@@ -155,6 +155,10 @@ int recv_loop(int socketfd) {
 			fgets(buf, LINE, stdin);
 
 			parse_two(buf, &query_x, &query_y);
+
+#if DEBUG > 0
+			printf("Query point: %d, %d\n", query_x, query_y);
+#endif
 
 			return 22;
 
