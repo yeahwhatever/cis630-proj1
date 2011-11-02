@@ -264,16 +264,22 @@ void step_sheet(struct sheet *s){
 		     + s->prev_sheet[i+1][j]
 		     + s->prev_sheet[i][j+1]) / 5.0;
 
-	  delta = s->prev_sheet[i][j] - s->sheet[i][j];
+    }
+  }
+
+  reset_sheet(s);
+
+  for(i=1; i < (s->x-1); i++){
+    for(j=1; j < (s->y-1); j++){
+	  delta = s->sheet[i][j] - s->prev_sheet[i][j];
 	  if (delta > big_delta)
 		  big_delta = delta;
-    }
+	}
   }
 
   if (big_delta < DELTA_TERMINATE)
 	  s->checked = 1;
 
-  reset_sheet(s);
 }
 
 /* TERMINATE_SHEET_CHECK(X,Y)
