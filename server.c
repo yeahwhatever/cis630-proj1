@@ -23,10 +23,11 @@
 
 #define BACKLOG 10
 #define DEBUG 0
+#define BUFSIZE 100
 
 void test_temperature();
 char* create_test();
-float run_sheet(char* json);
+float run_sheet(struct sheet *s);
 
 int main(int argc, char *argv[]) {
 	int status, socketfd, yes=1;
@@ -98,10 +99,7 @@ int main(int argc, char *argv[]) {
 	return status;
 }
 
-float run_sheet(char *json) {
-	int width, height, num_heat;
-	struct heatpoint *heatpoints = parseJson(json, &width, &height, &num_heat);
-	struct sheet *s = init_sheet(width, height, heatpoints, num_heat);
+float run_sheet(struct sheet *s) {
 
 
 	printf("%d %d %d %d\n", 400, s->x, 400, s->y);
@@ -179,47 +177,56 @@ int listen_loop(int socketfd) {
 	socklen_t sin_size;
 	struct sockaddr_storage client_addr;
 	int client_fd, num_bytes;
+	int x_v, y_v;
+	char buf[BUFSIZE];
 
-	char buf[100];
+	sin_size = sizeof client_addr;
+	client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
 
-		sin_size = sizeof client_addr;
-		client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
+	if (client_fd == -1) {
+		perror("accept");
+		continue;
+	}
 
-		if (client_fd == -1) {
-			perror("accept");
-			continue;
-		}
+	if ((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+		perror("recv");
+	buf[num_bytes] = '\0';
 
-		if ((num_bytes = recv(client_fd, buf, 99, 0)) == -1)
+	if (strcmp(buf, "hey")) {
+		fprintf(stderr, "Didn't get a 'hey'");
+		close(client_fd);
+		continue;
+	}
+
+	if (send(client_fd, "whatsup", 7, 0) == -1) 
+		perror("send");
+
+	if((num_byes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+		perror("recv");
+	buf[num_bytes] = '\0';
+
+	char final_val[100];
+	int width, height, num_heat;
+	struct heatpoint *hps = parseJson(buf, &width, &height, &num_heat);
+	struct sheet *s = init_sheet(width, height, hps, num_heat);
+	free(hps);
+	sprint(final_val, "%.6f", run_sheet(s));
+	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
+		perror("send");	
+
+	while (1) {
+		if((num_bytes = rec(client_fd, buf, BUFSIZE-1, 0)) == -1)
 			perror("recv");
 		buf[num_bytes] = '\0';
 
-		if (strcmp(buf, "hey")) {
-			fprintf(stderr, "Didn't get a 'hey'");
-			close(client_fd);
-			continue;
-		}
+		parseJsonQuery(buf, &x_v, &y_v);
+		if(x_v == 0 && y_v == 0) break;
+		query_sheet(s, x_v, y_y);
 
-		if (send(client_fd, "whatsup", 7, 0) == -1) 
-			perror("send");
+	}
 
-		if((num_byes = recv(client_fd, buf, 99, 0)) == -1)
-			perror("recv");
-		buf[num_bytes] = '\0';
-
-		char final_val[100];
-		sprint(final_val, "%.6f", run_sheet(buf));
-		if(send(client_fd, final_val, strlen(final_val), 0) == -1)
-			perror("send");	
-
-		while (1) {
-			if((num_bytes = rec(client_fd, buf, 99, 0)) == -1)
-				perror("recv");
-			buf[num_bytes] = '\0';
-
-			close(client_fd);
-		}
-
+	free_sheet(s);
+	close(client_fd);
 	return 0;
 }
 
