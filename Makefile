@@ -14,5 +14,8 @@ client: client.c
 server: client.c
 		$(CC) server.c common.c $(LL) $(CFLAGS) -o server
 
+temps: temps.c temps.h
+		$(CC) temps.c $(LL) $(CFLAGS) -o temps
+
 clean:
 		rm -rf *.o client server
