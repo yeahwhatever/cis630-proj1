@@ -89,89 +89,14 @@ int main(int argc, char *argv[]) {
 	return status;
 }
 
-float run_sheet(struct sheet *s, int x, int y) {
-
-	if(!s->checked) {
-		int i;
-		for (i = 0; i < 5000 && !(s->checked); i++) {
-			step_sheet(s);
-			printf("%d iterations\n",i); 
-
-		}
-
-		s->checked = 1;
-		printf("Finished after %d iterations\n",i); 
-	}
-
-	float final_val = query_sheet(s,x,y);
-	printf("Target (%d,%d) terminated with value %f\n",x,y,final_val);
-	return final_val;
-
-}
-char* create_test() {
-
-  struct heatpoint heatpoints[5];
-
-  heatpoints[0].x = 100;
-  heatpoints[0].y = 100;
-  heatpoints[0].t = 33.0;
-  heatpoints[1].x = 100;
-  heatpoints[1].y = 700;
-  heatpoints[1].t = 13.0;
-  heatpoints[2].x = 375;
-  heatpoints[2].y = 375;
-  heatpoints[2].t = 20.0;
-  heatpoints[3].x = 750;
-  heatpoints[3].y = 700;
-  heatpoints[3].t = 13.0;
-  heatpoints[4].x = 350;
-  heatpoints[4].y = 700;
-  heatpoints[4].t = 23.0;
-
-  return mkJson(1000,1000, 5, heatpoints);
-}
-void test_temperature(){
-  struct heatpoint heatpoints[5];
-  int i;
-  struct sheet *s;
-
-  heatpoints[0].x = 100;
-  heatpoints[0].y = 100;
-  heatpoints[0].t = 33.0;
-  heatpoints[1].x = 100;
-  heatpoints[1].y = 700;
-  heatpoints[1].t = 13.0;
-  heatpoints[2].x = 375;
-  heatpoints[2].y = 375;
-  heatpoints[2].t = 20.0;
-  heatpoints[3].x = 750;
-  heatpoints[3].y = 700;
-  heatpoints[3].t = 13.0;
-  heatpoints[4].x = 350;
-  heatpoints[4].y = 700;
-  heatpoints[4].t = 23.0;
-
-  s = init_sheet(1000,1000,heatpoints,5);
-
-  printf("%d %d %d %d\n", 400, s->x, 400, s->y);
-
-  for (i = 0; i < 5000 && terminate_sheet_check(s, 400, 400); i++) {
-      step_sheet(s);
-  }
-
-  s->checked = 1;
-  printf("Finished after %d iterations\nFinal state is:\n",i);
-  printf("Target (%d,%d) terminated with value %f\n",400,400,query_sheet(s,400,400));
-
-  free_sheet(s);
-}
-
 int listen_loop(int socketfd) {
 	socklen_t sin_size;
 	struct sockaddr_storage client_addr;
-	int client_fd, num_bytes;
-	int x_v, y_v;
-	char buf[BUFSIZE];
+	struct sheet *s;
+	struct heatpoint *hps;
+	int client_fd, num_bytes, x_v, y_v, width, height, num_heat;
+	float ff;
+	char buf[BUFSIZE], final_val[100];
 
 	sin_size = sizeof client_addr;
 	client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
@@ -195,31 +120,49 @@ int listen_loop(int socketfd) {
 	if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 		perror("recv");
 	buf[num_bytes] = '\0';
+
 	printf("Received:\n%s\n", buf);
 
-	char final_val[100];
-	int width, height, num_heat;
-	struct heatpoint *hps = parseJson(buf, &width, &height, &num_heat);
-	int i;
+	/** 
+	 * Parse the json query into height, width, and number of heat sources
+	 */
+	hps = parseJson(buf, &width, &height, &num_heat);
+
+#if DEBUG > 0
 	for(i = 0; i < num_heat; i++) {
 		printf("x: %d, y: %d, t: %f\n",hps[i].x, hps[i].y, hps[i].t);
 
 	}
-	struct sheet *s = init_sheet(width, height, hps, num_heat);
+#endif 
+	/**
+	 * Init our sheet from the values we parse, and free those, as we don't
+	 * need them anymore
+	 */
+	s = init_sheet(width, height, hps, num_heat);
 	free(hps);
 
+	/**
+	 * recv the first query and parse it
+	 */
 	if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 		perror("recv");
 	buf[num_bytes] = '\0';
 
-	printf("Received query.\n");
 	parseJsonQuery(buf, &x_v, &y_v);
 	printf("Received query (%d, %d)\n", x_v, y_v);
-	float ff = run_sheet(s, x_v, y_v);
+
+	/**
+	 * Run the sheet with the specified values, and return the results
+	 */
+	ff = run_sheet(s, x_v, y_v);
 	sprintf(final_val, "%.6f", ff);
+
 	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
 		perror("send");	
 
+	/**
+	 * Loop forever returning points that the client queries
+	 */
 	while (1) {
 		if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 			perror("recv");
@@ -230,19 +173,47 @@ int listen_loop(int socketfd) {
 		if(x_v == 0 && y_v == 0) break;
 
 		sprintf(final_val, "%.6f", query_sheet(s, x_v, y_v));
+
 		if(send(client_fd, final_val, strlen(final_val), 0) == -1)
 			perror("send");	
 
 	}
 
+	/**
+	 * Free the memory, close the client_fd, and start the loop over again
+	 * waiting for another connection
+	 */
 	free_sheet(s);
 	close(client_fd);
 
 	return listen_loop(socketfd);
 }
 
+/**
+ * Run the sheet sheet, from the initial state and return the final temp
+ * for the x,y point specified. If we hit the error condition, we finish
+ * by setting the sheet to it's final state, and return the float
+ */
+float run_sheet(struct sheet *s, int x, int y) {
+	int i;
+	float final_val;
 
-/* STEP_SHEET(X,Y)
+	if(!s->checked) {
+		for (i = 0; i < 5000 && !(s->checked); i++) {
+			step_sheet(s);
+		}
+
+		s->checked = 1;
+		printf("Finished after %d iterations\n",i); 
+	}
+
+	final_val = query_sheet(s,x,y);
+	printf("Target (%d,%d) terminated with value %f\n",x,y,final_val);
+	return final_val;
+}
+
+
+/* STEP_SHEET()
    Moves the sheet one step forward in time
 */
 void step_sheet(struct sheet *s){
@@ -267,8 +238,15 @@ void step_sheet(struct sheet *s){
     }
   }
 
+  /**
+   * We need to reset before we look for the largest change...
+   */
   reset_sheet(s);
 
+  /**
+   * Get the largest change in the sheet and test if its smaller than our
+   * terminate case, if it is we set our finished flag.
+   */
   for(i=1; i < (s->x-1); i++){
     for(j=1; j < (s->y-1); j++){
 	  delta = s->sheet[i][j] - s->prev_sheet[i][j];
@@ -280,39 +258,6 @@ void step_sheet(struct sheet *s){
   if (big_delta < DELTA_TERMINATE)
 	  s->checked = 1;
 
-}
-
-/* TERMINATE_SHEET_CHECK(X,Y)
-   Checks if it is time to terminate by checking the specified
-   point to see if it's delta is less than .5.
-
-   If it's delta is zero then it means that the point has not been
-   touched yet and therefore we should not exit
-
-   returns true if it is time to go, false otherwise
-*/
-int terminate_sheet_check(struct sheet *s, int t_x, int t_y){
-  float delta;
-
-  //For the example given, the result of 1.744C is not consistent with the described algorithm.
-  //The change in temperature for target cell (400,400) is so small that it is always
-  //under the cutoff temperature change point of .5 C.
-
-  //Therefore we have removed our terminate sheet check for now and will always...
-
-  delta = 0;
-
-  printf("Terminate check %f %f %f cutoff %f\n",s->sheet[t_x+1][t_y+1],
-	 s->prev_sheet[t_x+1][t_y+1], delta, DELTA_TERMINATE);
-
-  if (delta == 0)
-    return 1;
-
-  /* If the delta value is less than the terminate value, return true */
-  else if (delta < DELTA_TERMINATE)
-    return 0;
-  else
-    return 1;
 }
 
 /* STEP_SHEET(X,Y)
@@ -334,8 +279,8 @@ float query_sheet(struct sheet *s, int x_val, int y_val){
    and reseting the constant heat sources
 */
 void reset_sheet(struct sheet *s){
-
   int i,j;
+
   /* Zero out the edges */
   j = s->y - 1;
   for(i = 0;i < s->x; i++){
@@ -355,7 +300,7 @@ void reset_sheet(struct sheet *s){
 
 }
 
-/* INIT_SHEET(X,Y)
+/* INIT_SHEET
    Initializes the sheet pointer
    Creates a matrix of size (x+2,y+2)
 */
@@ -402,7 +347,6 @@ struct sheet* init_sheet(int x_val, int y_val,
    prints the matrix for debugging purposes
 */
 void print_sheet(struct sheet *s){
-
   int i,j;
 
   for(i=0; i < s->x; i++){
@@ -415,11 +359,14 @@ void print_sheet(struct sheet *s){
   printf("\n");
 }
 
+/**
+ * Clean up all the memory we allocate in init_sheet
+ */
 void free_sheet(struct sheet *s) {
 	int i;
 
 	free(s->hps);
-	for(i = 0; i< s->x; i++){
+	for (i = 0; i< s->x; i++) {
 		free(s->sheet[i]);
 		free(s->prev_sheet[i]);
 	}

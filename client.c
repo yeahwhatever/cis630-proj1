@@ -64,9 +64,6 @@ int main(int argc, char *argv[]) {
 
 	freeaddrinfo(servinfo); 
 
-	if (send(socketfd, "hey", 3, 0) == -1)
-		perror("send");
-
 	status = recv_loop(socketfd);
 
 	close(socketfd);
@@ -81,6 +78,16 @@ int recv_loop(int socketfd) {
 	int x, y, query_x, query_y, num_heat;
 	struct heatpoint *hps;
 
+	if (send(socketfd, "hey", 3, 0) == -1)
+		perror("send");
+
+	/**
+	 * Big listen loop. Two main things we need to listen for here
+	 * First, a 'whatsup' will indicate we should send back an initial
+	 * sheet state. On the other hand, the second case indicates that we
+	 * got results from the server, and we should display them and ask for
+	 * a new point.
+	 */
 	while (1) {
 		if ((numbytes = recv(socketfd, buf, 99, 0)) == -1) {
 			perror("recv");
@@ -162,7 +169,7 @@ int recv_loop(int socketfd) {
 #if DEBUG > 0
 			printf("Query point: %d, %d\n", query_x, query_y);
 #endif
-			if(query_x == 0 && query_y == 0) break;
+
 			json = mkJsonQuery(query_x, query_y);
 
 			if (send(socketfd, json, strlen(json), 0) == -1)
@@ -172,7 +179,15 @@ int recv_loop(int socketfd) {
 #endif
 			free(json);
 
+			if (query_x == 0 && query_y == 0) 
+				break;
+
 		} else {
+			/**
+			 * This is the branch where we've recieved a result from the
+			 * server. Continue to query points until we give 0,0 in which
+			 * we send the close to the server, and clean up
+			 */
 			printf("Result: %s\n", buf);
 			printf("Point ('X Y') to query?\n");
 			fgets(buf, LINE, stdin);
@@ -197,6 +212,9 @@ int recv_loop(int socketfd) {
 
 }
 
+/**
+ * Parse two integers, seperated by spaces from the buffer
+ */
 void parse_two(char *s, int *x, int *y) {
 	int j, i = 0;
 	char tmp[LINE];
@@ -223,6 +241,9 @@ void parse_two(char *s, int *x, int *y) {
 	*y = atoi(tmp);
 }
 
+/**
+ * Parse two integers and a float, spearated by spaces from the buffer
+ */
 void parse_three(char *s, int *x, int *y, float *t) {
 	int i, j;
 	char tmp[LINE];
