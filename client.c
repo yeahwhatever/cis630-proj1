@@ -15,7 +15,7 @@
 #include "common.h"
 
 #define LINE 100
-#define DEBUG 2
+#define DEBUG 0
 
 int main(int argc, char *argv[]) {
 	char *host, *port;
@@ -248,8 +248,6 @@ void parse_three(char *s, int *x, int *y, float *t) {
 	int i, j;
 	char tmp[LINE];
 
-	printf("s: %s\n", s);
-
 	i = 0;
 	for (j = 0; i < LINE; i++) {
 		if (s[i] != ' ')
@@ -263,7 +261,6 @@ void parse_three(char *s, int *x, int *y, float *t) {
 	*x = atoi(tmp);
 
 	for (j = 0; i < LINE; i++) {
-		printf("s[i]: %c\n", s[i]);
 
 		if (s[i] != ' ')
 			tmp[j] = s[i];
@@ -272,7 +269,6 @@ void parse_three(char *s, int *x, int *y, float *t) {
 		j++;
 	}
 	tmp[j] = '\0';
-	printf("tmp: %s\n", tmp);
 	i++;
 	*y = atoi(tmp);
 
