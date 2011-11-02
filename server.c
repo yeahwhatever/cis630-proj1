@@ -23,7 +23,7 @@
 
 #define BACKLOG 10
 #define DEBUG 0
-#define BUFSIZE 100
+#define BUFSIZE 512
 
 int main(int argc, char *argv[]) {
 	int status, socketfd, yes=1;
@@ -91,15 +91,18 @@ int main(int argc, char *argv[]) {
 
 float run_sheet(struct sheet *s, int x, int y) {
 
-	int i;
-	for (i = 0; i < 5000 && terminate_sheet_check(s, x, y); i++) {
-		step_sheet(s);
+	if(!s->checked) {
+		int i;
+		for (i = 0; i < 5000 && terminate_sheet_check(s, x, y); i++) {
+			step_sheet(s);
+		}
+
+		s->checked = 1;
+		printf("Finished after %d iterations\nFinal state is:\n",i); 
 	}
 
-  s->checked = 1;
-  printf("Finished after %d iterations\nFinal state is:\n",i);
-  float final_val = query_sheet(s,x,y);
-  printf("Target (%d,%d) terminated with value %f\n",x,y,final_val);
+	float final_val = query_sheet(s,x,y);
+	printf("Target (%d,%d) terminated with value %f\n",x,y,final_val);
 	return final_val;
 
 }
@@ -190,13 +193,21 @@ int listen_loop(int socketfd) {
 	if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 		perror("recv");
 	buf[num_bytes] = '\0';
+	printf("Received:\n%s\n", buf);
 
 	char final_val[100];
 	int width, height, num_heat;
 	struct heatpoint *hps = parseJson(buf, &width, &height, &num_heat);
+	int i;
+	for(i = 0; i < num_heat; i++) {
+		printf("x: %d, y: %d, t: %f\n",hps[i].x, hps[i].y, hps[i].t);
+
+	}
 	struct sheet *s = init_sheet(width, height, hps, num_heat);
 	free(hps);
-	sprintf(final_val, "%.6f", run_sheet(s, width, height));
+	float ff = run_sheet(s, width, height);
+	printf("result: %f\n", ff);
+	sprintf(final_val, "%.6f", ff);
 	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
 		perror("send");	
 

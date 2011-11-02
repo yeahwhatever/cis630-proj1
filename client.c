@@ -149,16 +149,19 @@ int recv_loop(int socketfd) {
 #if DEBUG > 0
 			for (i = 0; i < num_heat; i++)
 				printf("x: %d y:%d t:%f\n", hps[i].x, hps[i].y, hps[i].t);
+			printf("Sending to server.\n");
 #endif
 			free(hps);
 			if (send(socketfd, json, strlen(json), 0) == -1)
 				perror("send");
 
-
+#if DEBUG > 0
+			printf("Awaiting server response.");
+#endif
 			free(json);
 
 		} else {
-			printf("Result: %s", buf);
+			printf("Result: %s\n", buf);
 			printf("Point ('X Y') to query?\n");
 			fgets(buf, LINE, stdin);
 
