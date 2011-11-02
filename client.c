@@ -145,21 +145,30 @@ int recv_loop(int socketfd) {
 				}
 			}
 
-			mkJson(x,y,num_heat, hps);
+			char *json = mkJson(x,y,num_heat, hps);
 #if DEBUG > 0
 			for (i = 0; i < num_heat; i++)
 				printf("x: %d y:%d t:%f\n", hps[i].x, hps[i].y, hps[i].t);
 			free(hps);
 #endif
+			if (send(socketfd, json, strlen(json), 0) == -1)
+				perror("send");
 
-			printf("Point ('X Y') to query?\n");
-			fgets(buf, LINE, stdin);
+			while(1) {
+				printf("Point ('X Y') to query?\n");
+				fgets(buf, LINE, stdin);
 
-			parse_two(buf, &query_x, &query_y);
-
+				parse_two(buf, &query_x, &query_y);
 #if DEBUG > 0
-			printf("Query point: %d, %d\n", query_x, query_y);
+				printf("Query point: %d, %d\n", query_x, query_y);
 #endif
+				if(query_x == 0 && query_y == 0) break;
+				json = mkJsonQuery(query_x, query_y);
+
+				if (send(socketfd, json, strlen(json), 0) == -1)
+					perror("send");
+			}
+			free(json);
 
 			return 22;
 
