@@ -212,6 +212,7 @@ int listen_loop(int socketfd) {
 
 	printf("Received query.\n");
 	parseJsonQuery(buf, &x_v, &y_v);
+	printf("Received query (%d, %d)\n", x_v, y_v);
 	float ff = run_sheet(s, x_v, y_v);
 	sprintf(final_val, "%.6f", ff);
 	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
@@ -234,7 +235,8 @@ int listen_loop(int socketfd) {
 
 	free_sheet(s);
 	close(client_fd);
-	return 0;
+
+	return listen_loop(socketfd);
 }
 
 
@@ -280,13 +282,12 @@ int terminate_sheet_check(struct sheet *s, int t_x, int t_y){
   //under the cutoff temperature change point of .5 C.
 
   //Therefore we have removed our terminate sheet check for now and will always...
-  return 1;
 
   delta = s->sheet[t_x+1][t_y+1] - s->prev_sheet[t_x+1][t_y+1];
 
 
   printf("Terminate check %f %f %f cutoff %f\n",s->sheet[t_x][t_y],
-	 s->prev_sheet[t_x][t_y],delta,DELTA_TERMINATE);
+	 s->prev_sheet[t_x][t_y], delta, DELTA_TERMINATE);
 
   if(delta == 0)
     return 1;
