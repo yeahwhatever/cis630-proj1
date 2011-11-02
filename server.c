@@ -206,8 +206,12 @@ int listen_loop(int socketfd) {
 		buf[num_bytes] = '\0';
 
 		parseJsonQuery(buf, &x_v, &y_v);
+		
 		if(x_v == 0 && y_v == 0) break;
-		query_sheet(s, x_v, y_v);
+
+		sprintf(final_val, "%.6f", query_sheet(s, x_v, y_v));
+		if(send(client_fd, final_val, strlen(final_val), 0) == -1)
+			perror("send");	
 
 	}
 
