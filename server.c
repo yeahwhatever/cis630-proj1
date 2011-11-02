@@ -93,8 +93,10 @@ float run_sheet(struct sheet *s, int x, int y) {
 
 	if(!s->checked) {
 		int i;
-		for (i = 0; i < 5000 && !s->checked; i++) {
+		for (i = 0; i < 5000 && !(s->checked); i++) {
 			step_sheet(s);
+			printf("%d iterations\n",i); 
+
 		}
 
 		s->checked = 1;
@@ -251,9 +253,6 @@ void step_sheet(struct sheet *s){
   for(i=0; i < s->x; i++){
     for(j=0; j < s->y; j++){
       s->prev_sheet[i][j] = s->sheet[i][j];
-	  delta = s->prev_sheet[i][j] - s->sheet[i][j];
-	  if (delta > big_delta)
-		  big_delta = delta;
     }
   }
 
@@ -264,6 +263,10 @@ void step_sheet(struct sheet *s){
 		     + s->prev_sheet[i][j-1]
 		     + s->prev_sheet[i+1][j]
 		     + s->prev_sheet[i][j+1]) / 5.0;
+
+	  delta = s->prev_sheet[i][j] - s->sheet[i][j];
+	  if (delta > big_delta)
+		  big_delta = delta;
     }
   }
 

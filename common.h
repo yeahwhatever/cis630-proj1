@@ -17,7 +17,7 @@ struct sheet {
 	float **sheet;
 	float **prev_sheet;
 
-	char checked;
+	int checked;
 };
 
 void* xmalloc(unsigned int size);
