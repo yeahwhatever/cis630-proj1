@@ -25,13 +25,17 @@
 #define DEBUG 0
 
 void test_temperature();
+char* create_test();
+float run_sheet(char* json);
 
 int main(int argc, char *argv[]) {
 	int status, socketfd, yes=1;
 	struct addrinfo hints, *servinfo, *p;
 	char *host, *port;
 
-	test_temperature();
+//	run_sheet(create_test());
+
+	//test_temperature();
 
 	if (argc != 3) {
 		printf("Usage: %s <host> <port>\n", argv[0]);
@@ -41,7 +45,7 @@ int main(int argc, char *argv[]) {
 		port = argv[2];
 	}
 
-	test_temperature();
+	//test_temperature();
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC; 
@@ -94,6 +98,47 @@ int main(int argc, char *argv[]) {
 	return status;
 }
 
+float run_sheet(char *json) {
+	int width, height, num_heat;
+	struct heatpoint *heatpoints = parseJson(json, &width, &height, &num_heat);
+	struct sheet *s = init_sheet(width, height, heatpoints, num_heat);
+
+
+	printf("%d %d %d %d\n", 400, s->x, 400, s->y);
+	int i;
+	for (i = 0; i < 5000 && terminate_sheet_check(s, 400, 400); i++) {
+		step_sheet(s);
+	}
+
+  s->checked = 1;
+  printf("Finished after %d iterations\nFinal state is:\n",i);
+  float final_val = query_sheet(s,400,400);
+  printf("Target (%d,%d) terminated with value %f\n",400,400,final_val);
+	return final_val;
+
+}
+char* create_test() {
+
+  struct heatpoint heatpoints[5];
+
+  heatpoints[0].x = 100;
+  heatpoints[0].y = 100;
+  heatpoints[0].t = 33.0;
+  heatpoints[1].x = 100;
+  heatpoints[1].y = 700;
+  heatpoints[1].t = 13.0;
+  heatpoints[2].x = 375;
+  heatpoints[2].y = 375;
+  heatpoints[2].t = 20.0;
+  heatpoints[3].x = 750;
+  heatpoints[3].y = 700;
+  heatpoints[3].t = 13.0;
+  heatpoints[4].x = 350;
+  heatpoints[4].y = 700;
+  heatpoints[4].t = 23.0;
+
+  return mkJson(1000,1000, 5, heatpoints);
+}
 void test_temperature(){
   struct heatpoint heatpoints[5];
   int i;
@@ -123,6 +168,7 @@ void test_temperature(){
       step_sheet(s);
   }
 
+  s->checked = 1;
   printf("Finished after %d iterations\nFinal state is:\n",i);
   printf("Target (%d,%d) terminated with value %f\n",400,400,query_sheet(s,400,400));
 
@@ -136,7 +182,6 @@ int listen_loop(int socketfd) {
 
 	char buf[100];
 
-	while (1) {
 		sin_size = sizeof client_addr;
 		client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
 
@@ -158,8 +203,22 @@ int listen_loop(int socketfd) {
 		if (send(client_fd, "whatsup", 7, 0) == -1) 
 			perror("send");
 
-		close(client_fd);
-	}
+		if((num_byes = recv(client_fd, buf, 99, 0)) == -1)
+			perror("recv");
+		buf[num_bytes] = '\0';
+
+		char final_val[100];
+		sprint(final_val, "%.6f", run_sheet(buf));
+		if(send(client_fd, final_val, strlen(final_val), 0) == -1)
+			perror("send");	
+
+		while (1) {
+			if((num_bytes = rec(client_fd, buf, 99, 0)) == -1)
+				perror("recv");
+			buf[num_bytes] = '\0';
+
+			close(client_fd);
+		}
 
 	return 0;
 }

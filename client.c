@@ -149,6 +149,7 @@ int recv_loop(int socketfd) {
 #if DEBUG > 0
 			for (i = 0; i < num_heat; i++)
 				printf("x: %d y:%d t:%f\n", hps[i].x, hps[i].y, hps[i].t);
+			free(hps);
 #endif
 
 			printf("Point ('X Y') to query?\n");
