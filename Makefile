@@ -6,16 +6,20 @@ CFLAGS = -Wall -W -g
 #LL = -lsocket -lnsl
 LL = 
 
-all: client server
+all: client server temps test
 
 client: client.c 
 		$(CC) client.c common.c $(LL) $(CFLAGS) -o client
 
-server: client.c
+server: server.c
 		$(CC) server.c common.c $(LL) $(CFLAGS) -o server
 
-temps: temps.c temps.h
+temps: temps.c 
 		$(CC) temps.c $(LL) $(CFLAGS) -o temps
 
+test: test.c
+		$(CC) test.c common.c $(LL) $(CFLAGS) -o test
+
+
 clean:
-		rm -rf *.o client server
+		rm -rf *.o client server temps test
