@@ -98,7 +98,7 @@ float run_sheet(struct sheet *s, int x, int y) {
 		}
 
 		s->checked = 1;
-		printf("Finished after %d iterations\nFinal state is:\n",i); 
+		printf("Finished after %d iterations\n",i); 
 	}
 
 	float final_val = query_sheet(s,x,y);
@@ -275,31 +275,27 @@ void step_sheet(struct sheet *s){
 int terminate_sheet_check(struct sheet *s, int t_x, int t_y){
   float delta;
 
-  return 1;
   //For the example given, the result of 1.744C is not consistent with the described algorithm.
   //The change in temperature for target cell (400,400) is so small that it is always
   //under the cutoff temperature change point of .5 C.
 
   //Therefore we have removed our terminate sheet check for now and will always...
+  return 1;
+
   delta = s->sheet[t_x+1][t_y+1] - s->prev_sheet[t_x+1][t_y+1];
 
 
   printf("Terminate check %f %f %f cutoff %f\n",s->sheet[t_x][t_y],
 	 s->prev_sheet[t_x][t_y],delta,DELTA_TERMINATE);
 
-  /* If the curr value is equal to the present value return false */
-  if(delta == 0){
+  if(delta == 0)
     return 1;
-  }    
 
   /* If the delta value is less than the terminate value, return true */
-  else if(delta < DELTA_TERMINATE){
+  else if(delta < DELTA_TERMINATE)
     return 0;
-  }
-  else{
-    /*Else return false*/
+  else
     return 1;
-  }
 }
 
 /* STEP_SHEET(X,Y)

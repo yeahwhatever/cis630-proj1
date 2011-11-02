@@ -139,7 +139,7 @@ int recv_loop(int socketfd) {
 					return 9;
 				}
 
-				if (hps[i].t < -100 || hps[i].t > 500) {
+				if (hps[i].t < -100 || hps[i].t > 1500) {
 					fprintf(stderr, "Heat point temperature must be -100 <= t <= 500\n");
 					return 10;
 				}
@@ -181,13 +181,15 @@ int recv_loop(int socketfd) {
 #if DEBUG > 0
 			printf("Query point: %d, %d\n", query_x, query_y);
 #endif
-			if(query_x == 0 && query_y == 0) break;
 			char *json = mkJsonQuery(query_x, query_y);
 
 			if (send(socketfd, json, strlen(json), 0) == -1)
 				perror("send");
+			
 			free(json);
 
+			if(query_x == 0 && query_y == 0) 
+				break;
 		}
 
 	}
