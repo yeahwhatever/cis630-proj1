@@ -34,10 +34,6 @@ int main(int argc, char *argv[]) {
 	struct addrinfo hints, *servinfo, *p;
 	char *host, *port;
 
-//	run_sheet(create_test());
-
-	//test_temperature();
-
 	if (argc != 3) {
 		printf("Usage: %s <host> <port>\n", argv[0]);
 		return 1;
@@ -45,8 +41,6 @@ int main(int argc, char *argv[]) {
 		host = argv[1];
 		port = argv[2];
 	}
-
-	//test_temperature();
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC; 
@@ -99,19 +93,17 @@ int main(int argc, char *argv[]) {
 	return status;
 }
 
-float run_sheet(struct sheet *s) {
+float run_sheet(struct sheet *s, int x, int y) {
 
-
-	printf("%d %d %d %d\n", 400, s->x, 400, s->y);
 	int i;
-	for (i = 0; i < 5000 && terminate_sheet_check(s, 400, 400); i++) {
+	for (i = 0; i < 5000 && terminate_sheet_check(s, x, y); i++) {
 		step_sheet(s);
 	}
 
   s->checked = 1;
   printf("Finished after %d iterations\nFinal state is:\n",i);
-  float final_val = query_sheet(s,400,400);
-  printf("Target (%d,%d) terminated with value %f\n",400,400,final_val);
+  float final_val = query_sheet(s,x,y);
+  printf("Target (%d,%d) terminated with value %f\n",x,y,final_val);
 	return final_val;
 
 }
@@ -183,10 +175,8 @@ int listen_loop(int socketfd) {
 	sin_size = sizeof client_addr;
 	client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
 
-	if (client_fd == -1) {
+	if (client_fd == -1)
 		perror("accept");
-		continue;
-	}
 
 	if ((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 		perror("recv");
@@ -195,13 +185,13 @@ int listen_loop(int socketfd) {
 	if (strcmp(buf, "hey")) {
 		fprintf(stderr, "Didn't get a 'hey'");
 		close(client_fd);
-		continue;
+		return 5;
 	}
 
 	if (send(client_fd, "whatsup", 7, 0) == -1) 
 		perror("send");
 
-	if((num_byes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+	if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 		perror("recv");
 	buf[num_bytes] = '\0';
 
@@ -210,18 +200,18 @@ int listen_loop(int socketfd) {
 	struct heatpoint *hps = parseJson(buf, &width, &height, &num_heat);
 	struct sheet *s = init_sheet(width, height, hps, num_heat);
 	free(hps);
-	sprint(final_val, "%.6f", run_sheet(s));
+	sprintf(final_val, "%.6f", run_sheet(s, width, height));
 	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
 		perror("send");	
 
 	while (1) {
-		if((num_bytes = rec(client_fd, buf, BUFSIZE-1, 0)) == -1)
+		if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 			perror("recv");
 		buf[num_bytes] = '\0';
 
 		parseJsonQuery(buf, &x_v, &y_v);
 		if(x_v == 0 && y_v == 0) break;
-		query_sheet(s, x_v, y_y);
+		query_sheet(s, x_v, y_v);
 
 	}
 

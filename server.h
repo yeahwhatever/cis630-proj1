@@ -11,6 +11,7 @@ int listen_loop(int);
 void test_temperature();
 void step_sheet(struct sheet *s);
 int terminate_sheet_check(struct sheet *s, int x, int y);
+float run_sheet(struct sheet *s, int, int);
 float query_sheet(struct sheet *s, int,int);
 struct sheet* init_sheet(int,int,struct heatpoint*,int);
 void reset_sheet( struct sheet *s);
