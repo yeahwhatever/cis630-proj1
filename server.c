@@ -93,7 +93,7 @@ float run_sheet(struct sheet *s, int x, int y) {
 
 	if(!s->checked) {
 		int i;
-		for (i = 0; i < 5000 && terminate_sheet_check(s, x, y); i++) {
+		for (i = 0; i < 5000 && !s->checked; i++) {
 			step_sheet(s);
 		}
 
@@ -245,10 +245,15 @@ int listen_loop(int socketfd) {
 */
 void step_sheet(struct sheet *s){
   int i,j;
+  float delta = 0, big_delta = 0;
+
   /* Move curr sheet to prev sheet */
   for(i=0; i < s->x; i++){
     for(j=0; j < s->y; j++){
       s->prev_sheet[i][j] = s->sheet[i][j];
+	  delta = s->prev_sheet[i][j] - s->sheet[i][j];
+	  if (delta > big_delta)
+		  big_delta = delta;
     }
   }
 
@@ -258,9 +263,12 @@ void step_sheet(struct sheet *s){
 		     + s->prev_sheet[i-1][j]
 		     + s->prev_sheet[i][j-1]
 		     + s->prev_sheet[i+1][j]
-		     + s->prev_sheet[i][j+1]) / 5;
+		     + s->prev_sheet[i][j+1]) / 5.0;
     }
   }
+
+  if (big_delta < DELTA_TERMINATE)
+	  s->checked = 1;
 
   reset_sheet(s);
 }
@@ -283,17 +291,16 @@ int terminate_sheet_check(struct sheet *s, int t_x, int t_y){
 
   //Therefore we have removed our terminate sheet check for now and will always...
 
-  delta = s->sheet[t_x+1][t_y+1] - s->prev_sheet[t_x+1][t_y+1];
+  delta = 0;
 
+  printf("Terminate check %f %f %f cutoff %f\n",s->sheet[t_x+1][t_y+1],
+	 s->prev_sheet[t_x+1][t_y+1], delta, DELTA_TERMINATE);
 
-  printf("Terminate check %f %f %f cutoff %f\n",s->sheet[t_x][t_y],
-	 s->prev_sheet[t_x][t_y], delta, DELTA_TERMINATE);
-
-  if(delta == 0)
+  if (delta == 0)
     return 1;
 
   /* If the delta value is less than the terminate value, return true */
-  else if(delta < DELTA_TERMINATE)
+  else if (delta < DELTA_TERMINATE)
     return 0;
   else
     return 1;
