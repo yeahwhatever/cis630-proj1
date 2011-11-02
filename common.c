@@ -35,6 +35,7 @@ char* mkJson(int x, int y, int num_heat, struct heatpoint *hps ) {
 		sprintf(tstr, "{ x: %d, y: %d, t: %f }", hps[i].x, hps[i].y, hps[i].t);
 		strcat(str, tstr); 
 	}
+	free(tstr);
 	strcat(str, " ] } } ");
 	printf("%s\n", str);
 	return str;
