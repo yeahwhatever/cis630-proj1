@@ -203,25 +203,16 @@ int terminate_sheet_check(struct sheet *s, int t_x, int t_y){
   float delta;
 
   return 1;
-  delta = s->sheet[t_x][t_y] - s->prev_sheet[t_x][t_y];
-  /*
-  printf("Terminate check %f %f %f \n",sheet[t_x][t_y],
-	 prev_sheet[t_x][t_y],delta);
-  */
-
   //For the example given, the result of 1.744C is not consistent with the described algorithm.
   //The change in temperature for target cell (400,400) is so small that it is always
   //under the cutoff temperature change point of .5 C.
 
   //Therefore we have removed our terminate sheet check for now and will always...
-  return 0;
-
-  float delta;
-  delta = sheet[t_x][t_y]-prev_sheet[t_x][t_y];
+  delta = s->sheet[t_x+1][t_y+1] - s->prev_sheet[t_x+1][t_y+1];
 
 
-  printf("Terminate check %f %f %f cutoff %f\n",sheet[t_x][t_y],
-	 prev_sheet[t_x][t_y],delta,delta_terminate);
+  printf("Terminate check %f %f %f cutoff %f\n",s->sheet[t_x][t_y],
+	 s->prev_sheet[t_x][t_y],delta,DELTA_TERMINATE);
 
   /* If the curr value is equal to the present value return false */
   if(delta == 0){

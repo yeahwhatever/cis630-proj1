@@ -22,4 +22,4 @@ test: test.c
 
 
 clean:
-		rm -rf *.o client server temps test
+		rm -rf *.o *.core client server temps test
