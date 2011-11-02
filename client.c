@@ -157,8 +157,6 @@ int recv_loop(int socketfd) {
 
 			free(json);
 
-			return 22;
-
 		} else {
 			printf("Result: %s", buf);
 			printf("Point ('X Y') to query?\n");
@@ -173,10 +171,12 @@ int recv_loop(int socketfd) {
 
 			if (send(socketfd, json, strlen(json), 0) == -1)
 				perror("send");
+			free(json);
 
 		}
 
 	}
+	return 0;
 
 }
 
