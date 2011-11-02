@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 }
 
 int recv_loop(int socketfd) {
-	char buf[LINE];
+	char buf[LINE], *json;
 	int i, numbytes;
 
 	int x, y, query_x, query_y, num_heat;
@@ -152,7 +152,7 @@ int recv_loop(int socketfd) {
 				}
 			}
 
-			char *json = mkJson(x,y,num_heat, hps);
+			json = mkJson(x,y,num_heat, hps);
 #if DEBUG > 0
 			for (i = 0; i < num_heat; i++)
 				printf("x: %d y:%d t:%f\n", hps[i].x, hps[i].y, hps[i].t);
@@ -196,7 +196,7 @@ int recv_loop(int socketfd) {
 #if DEBUG > 0
 			printf("Query point: %d, %d\n", query_x, query_y);
 #endif
-			char *json = mkJsonQuery(query_x, query_y);
+			json = mkJsonQuery(query_x, query_y);
 
 			if (send(socketfd, json, strlen(json), 0) == -1)
 				perror("send");

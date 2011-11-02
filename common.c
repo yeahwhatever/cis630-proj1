@@ -48,9 +48,10 @@ char* mkJsonQuery(int x, int y) {
 }
 
 struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) {
-	int i = 1;
-	int nstart;
-	char getX, getY, getNum, hpCoords, getT;
+	int i = 1, j, nstart;
+	char getX, getY, getNum, hpCoords, getT, inHp, cont, *numStr;
+	struct heatpoint *hps;
+
 	getX = getY = getNum = hpCoords = 0;
 	while(json[i] != '[')
 	{
@@ -77,7 +78,7 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 				while(json[i] != ' ') {
 					i++;
 				}
-				char* numStr = xmalloc(i-nstart);
+				numStr = xmalloc(i-nstart);
 				strncpy(numStr, json+nstart, i-nstart-1);
 				if(getX) {
 					*width = atoi(numStr);
@@ -107,9 +108,8 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 		}
 	}
 
-	struct heatpoint *hps = xmalloc(sizeof(struct heatpoint) * *num_heat);
-	int j = -1;
-	char inHp, cont;
+	hps = xmalloc(sizeof(struct heatpoint) * *num_heat);
+	j = -1;
 	inHp = getX = getY = getT = 0;
 	cont = 1;
        	while(cont) {
@@ -153,7 +153,7 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 				while(json[i] != ' ') {
 					i++;
 				}
-				char* numStr = xmalloc(i-nstart);
+				numStr = xmalloc(i-nstart);
 				strncpy(numStr, json+nstart, i-nstart-1);
 				if(getX) {
 					hps[j].x = atoi(numStr);
@@ -183,7 +183,7 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 void parseJsonQuery( char* json, int *x, int *y) {
 	int i = 0;
 	int nstart = 0;
-	char getX, getY;
+	char getX, getY, *numStr;
 	getX = getY = 0;
 	while(json[i] != '}') {
 		switch(json[i]) {
@@ -209,7 +209,7 @@ void parseJsonQuery( char* json, int *x, int *y) {
 				while(json[i] != ' ' && json[i] != ',') {
 					i++;
 				}
-				char* numStr = xmalloc(i-nstart);
+				numStr = xmalloc(i-nstart);
 				strncpy(numStr, json+nstart, i-nstart);
 				if(getX) {
 					*x = atoi(numStr);

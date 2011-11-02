@@ -1,12 +1,12 @@
 CC = gcc
 
-CFLAGS = -Wall -W -g 
+CFLAGS = -Wall -W -g -ansi -pedantic -Werror
 
 # For solaris
 #LL = -lsocket -lnsl
 LL = 
 
-all: client server temps test
+all: client server
 
 client: client.c 
 		$(CC) client.c common.c $(LL) $(CFLAGS) -o client
@@ -14,12 +14,5 @@ client: client.c
 server: server.c
 		$(CC) server.c common.c $(LL) $(CFLAGS) -o server
 
-temps: temps.c 
-		$(CC) temps.c $(LL) $(CFLAGS) -o temps
-
-test: test.c
-		$(CC) test.c common.c $(LL) $(CFLAGS) -o test
-
-
 clean:
-		rm -rf *.o *.core client server temps test
+		rm -rf *.o *.core client server 
