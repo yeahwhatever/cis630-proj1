@@ -37,6 +37,8 @@ int main(int argc, char *argv[]) {
 		port = argv[2];
 	}
 
+	test_temperature();
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC; 
 	hints.ai_socktype = SOCK_STREAM;
@@ -89,27 +91,38 @@ int main(int argc, char *argv[]) {
 }
 
 void test_temperature(){
-  struct heatpoint heatpoints[2];
+  struct heatpoint heatpoints[5];
+  int i;
+  struct sheet *s;
 
-  heatpoints[0].x = 3;
-  heatpoints[0].y = 3;
-  heatpoints[0].t = 100;
-  heatpoints[1].x = 7;
-  heatpoints[1].y = 7;
-  heatpoints[1].t = 100;
+  heatpoints[0].x = 100;
+  heatpoints[0].y = 100;
+  heatpoints[0].t = 33.0;
+  heatpoints[1].x = 100;
+  heatpoints[1].y = 700;
+  heatpoints[1].t = 13.0;
+  heatpoints[2].x = 375;
+  heatpoints[2].y = 375;
+  heatpoints[2].t = 20.0;
+  heatpoints[3].x = 750;
+  heatpoints[3].y = 700;
+  heatpoints[3].t = 13.0;
+  heatpoints[4].x = 350;
+  heatpoints[4].y = 700;
+  heatpoints[4].t = 23.0;
 
-  init_sheet(10,10,heatpoints,2,5,5);
-  printf("%d %d %d %d\n", t_x, x, t_y, y);
+  s = init_sheet(1000,1000,heatpoints,5);
 
-  while((iteration < 5000)
-	&& (terminate_sheet_check() != 1)){
-      step_sheet();
+  printf("%d %d %d %d\n", 400, s->x, 400, s->y);
+
+  for (i = 0; i < 5000 && terminate_sheet_check(s, 400, 400); i++) {
+      step_sheet(s);
   }
 
-  printf("Finished after %d iterations\nFinal state is:\n",iteration);
-  print_sheet();
-  printf("Target (%d,%d) terminated with value %f\n",t_x,t_y,query_sheet(t_x,t_y));
+  printf("Finished after %d iterations\nFinal state is:\n",i);
+  printf("Target (%d,%d) terminated with value %f\n",400,400,query_sheet(s,400,400));
 
+  free_sheet(s);
 }
 
 int listen_loop(int socketfd) {
@@ -151,30 +164,26 @@ int listen_loop(int socketfd) {
 /* STEP_SHEET(X,Y)
    Moves the sheet one step forward in time
 */
-void* step_sheet(){
-
+void step_sheet(struct sheet *s){
   int i,j;
   /* Move curr sheet to prev sheet */
-  for(i=0; i<x; i++){
-    for(j=0; j<y; j++){
-      prev_sheet[i][j] = sheet[i][j];
+  for(i=0; i < s->x; i++){
+    for(j=0; j < s->y; j++){
+      s->prev_sheet[i][j] = s->sheet[i][j];
     }
   }
 
-  for(i=1; i<(x-1); i++){
-    for(j=1; j<(y-1); j++){
-      sheet[i][j] = (prev_sheet[i][j]
-		     + prev_sheet[i-1][j]
-		     + prev_sheet[i][j-1]
-		     + prev_sheet[i+1][j]
-		     + prev_sheet[i][j+1]) / 5;
+  for(i=1; i < (s->x-1); i++){
+    for(j=1; j < (s->y-1); j++){
+      s->sheet[i][j] = (s->prev_sheet[i][j]
+		     + s->prev_sheet[i-1][j]
+		     + s->prev_sheet[i][j-1]
+		     + s->prev_sheet[i+1][j]
+		     + s->prev_sheet[i][j+1]) / 5;
     }
   }
 
-  reset_sheet();
-  iteration++;
-
-  return 0;
+  reset_sheet(s);
 }
 
 /* TERMINATE_SHEET_CHECK(X,Y)
@@ -186,24 +195,26 @@ void* step_sheet(){
 
    returns true if it is time to go, false otherwise
 */
-int terminate_sheet_check(){
+int terminate_sheet_check(struct sheet *s, int t_x, int t_y){
   float delta;
-  delta = sheet[t_x][t_y]-prev_sheet[t_x][t_y];
+
+  return 1;
+  delta = s->sheet[t_x][t_y] - s->prev_sheet[t_x][t_y];
   /*
   printf("Terminate check %f %f %f \n",sheet[t_x][t_y],
 	 prev_sheet[t_x][t_y],delta);
   */
   /* If the curr value is equal to the present value return false */
   if(delta == 0){
-    return 0;
+    return 1;
   }    
   /* If the delta value is less than the terminate value, return true */
-  else if(delta < delta_terminate){
-    return 1;
+  else if(delta < DELTA_TERMINATE){
+    return 0;
   }
   else{
     /*Else return false*/
-    return 0;
+    return 1;
   }
 }
 
@@ -211,9 +222,9 @@ int terminate_sheet_check(){
    Checks the current heat value of the sheet
    at the specified point
 */
-float query_sheet(int x_val, int y_val){
-  if(x_val < x && y_val < y){
-    return sheet[x_val][y_val];
+float query_sheet(struct sheet *s, int x_val, int y_val){
+  if(x_val+1 < s->x && y_val+1 < s->y){
+    return s->sheet[x_val + 1][y_val + 1];
   }
   else{
     return -1;
@@ -225,92 +236,95 @@ float query_sheet(int x_val, int y_val){
    by zeroing out the edges
    and reseting the constant heat sources
 */
-void* reset_sheet(){
+void reset_sheet(struct sheet *s){
 
   int i,j;
   /* Zero out the edges */
-  j = y - 1;
-  for(i=0;i<x;i++){
-    sheet[i][0] = 0;
-    sheet[i][j] = 0;
+  j = s->y - 1;
+  for(i = 0;i < s->x; i++){
+    s->sheet[i][0] = 0;
+    s->sheet[i][j] = 0;
   }
-  i = x - 1;
-  for(j=0;j<y;j++){
-    sheet[0][j] = 0;
-    sheet[i][j] = 0;
+  i = s->x - 1;
+  for(j = 0; j< s->y; j++){
+    s->sheet[0][j] = 0;
+    s->sheet[i][j] = 0;
   }
 
   /* Reset constant heat sources */
-  for(i=0; i<num_sources; i++){
-    sheet[heat_sources[i].x][heat_sources[i].y] = heat_sources[i].t;
+  for(i = 0; i < s->num_heat; i++){
+  	s->sheet[s->hps[i].x+1][s->hps[i].y+1] = s->hps[i].t;
   }
 
-  return 0;
 }
 
 /* INIT_SHEET(X,Y)
    Initializes the sheet pointer
    Creates a matrix of size (x+2,y+2)
 */
-void* init_sheet(int x_val, int y_val, 
-		 struct heatpoint * heatpoints, int num_heatpoints,
-		 int tx_val, int ty_val){
+struct sheet* init_sheet(int x_val, int y_val, 
+		 struct heatpoint * heatpoints, int num_heatpoints){
   int i, j;
 
-  /* Initialize our target point */
-  t_x = tx_val;
-  t_y = ty_val;
+  struct sheet *s = xmalloc(sizeof(struct sheet));
 
-  /* Initialize constant heat sources */
-  num_sources = num_heatpoints;
-  heat_sources = xmalloc(num_sources * sizeof(struct heatpoint));
-  for(i=0; i<num_sources; i++){
-    heat_sources[i] = heatpoints[i];
+  s->num_heat = num_heatpoints;
+  s->hps = xmalloc(num_heatpoints * sizeof(struct heatpoint));
+  for(i = 0; i < num_heatpoints; i++){
+    s->hps[i].x = heatpoints[i].x;
+    s->hps[i].y = heatpoints[i].y;
+    s->hps[i].t = heatpoints[i].t;
   }
   
   /* Initialize past and present sheets */
-  x = x_val + 2;
-  y = y_val + 2;
-  iteration = 0;
+  s->x = x_val + 2;
+  s->y = y_val + 2;
 
-  sheet = xmalloc(x*sizeof(float*));
-  prev_sheet = xmalloc(x*sizeof(float*));
+  s->sheet = xmalloc(x_val*sizeof(float *));
+  s->prev_sheet = xmalloc(x_val*sizeof(float *));
 
-  for(i=0; i< x; i++){
-    sheet[i] = xmalloc(y*sizeof(float*));
-    prev_sheet[i] = xmalloc(y*sizeof(float*));
-  }
 
   /*Initialize Values in past and present sheets*/
-  for(i=0; i<x; i++){
-    for(j=0; j<y; j++){
-      sheet[i][j] = 0;
-      prev_sheet[i][j] = 0;
+  for(i = 0; i< s->x; i++){
+	s->sheet[i] = xmalloc(s->y*sizeof(float));
+	s->prev_sheet[i] = xmalloc(s->y*sizeof(float));
+    for(j = 0; j< s->y; j++){
+      s->sheet[i][j] = 0;
+      s->prev_sheet[i][j] = 0;
     }
   }
 
   /* Insert constant heat values */
-  reset_sheet();
+  reset_sheet(s);
 
-  return 0;
+  return s;
 }
 
 /* PRINT_SHEET()
    prints the matrix for debugging purposes
 */
-void* print_sheet(){
+void print_sheet(struct sheet *s){
 
   int i,j;
 
-  for(i=0; i<x; i++){
-    for(j=0; j<y; j++){
-      printf("%f ",sheet[i][j]);
+  for(i=0; i < s->x; i++){
+    for(j=0; j < s->y; j++){
+      printf("%f ", s->sheet[i][j]);
     }
     printf("\n");
   }
 
   printf("\n");
-
-  return 0;
 }
 
+void free_sheet(struct sheet *s) {
+	int i;
+
+	free(s->hps);
+	for(i = 0; i< s->x; i++){
+		free(s->sheet[i]);
+		free(s->prev_sheet[i]);
+	}
+
+	free(s);
+}

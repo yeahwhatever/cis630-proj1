@@ -7,6 +7,17 @@ struct heatpoint {
 	float t;
 };
 
+struct sheet {
+	int x;
+	int y;
+
+	int num_heat;
+	struct heatpoint *hps;
+
+	float **sheet;
+	float **prev_sheet;
+};
+
 void* xmalloc(unsigned int size);
 
 char* mkJson(int x, int y, int num_heat, struct heatpoint *hps );
