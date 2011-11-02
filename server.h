@@ -12,7 +12,6 @@ int listen_loop(int);
 float delta_terminate = .5;
 /*****************************************/
 
-
 /* Our representation of the metal sheet */
 float** sheet;
 float** prev_sheet;
@@ -35,11 +34,11 @@ int t_x=0, t_y=0;
 /* Our iteration of the sheet.  Will return at 5000 */
 int iteration;
 
-void* step_sheet();
+void step_sheet();
 int terminate_sheet_check();
 float query_sheet(int,int);
-void* init_sheet(int,int,struct heatpoint*,int,int,int);
-void* reset_sheet();
-void* print_sheet();
+void init_sheet(int,int,struct heatpoint*,int,int,int);
+void reset_sheet();
+void print_sheet();
 
 #endif

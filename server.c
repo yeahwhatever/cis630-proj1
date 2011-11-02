@@ -24,10 +24,14 @@
 #define BACKLOG 10
 #define DEBUG 0
 
+void test_temperature();
+
 int main(int argc, char *argv[]) {
 	int status, socketfd, yes=1;
 	struct addrinfo hints, *servinfo, *p;
 	char *host, *port;
+
+	test_temperature();
 
 	if (argc != 3) {
 		printf("Usage: %s <host> <port>\n", argv[0]);
@@ -89,25 +93,62 @@ int main(int argc, char *argv[]) {
 }
 
 void test_temperature(){
+
+  struct heatpoint heatpoints[5];
+  num_sources = 5;
+
+  x=1002;
+  y=1002;
+
+  t_x = 401;
+  t_y = 401;
+
+  heatpoints[0].x = 101;
+  heatpoints[0].y = 101;
+  heatpoints[0].t = 33;
+
+  heatpoints[1].x = 101;
+  heatpoints[1].y = 701;
+  heatpoints[1].t = 13;
+
+  heatpoints[2].x = 376;
+  heatpoints[2].y = 376;
+  heatpoints[2].t = 20;
+
+  heatpoints[3].x = 751;
+  heatpoints[3].y = 701;
+  heatpoints[3].t = 13;
+
+  heatpoints[4].x = 351;
+  heatpoints[4].y = 701;
+  heatpoints[4].t = 23;
+
+  /*
   struct heatpoint heatpoints[2];
+  num_sources = 2;
+
+  x=10;
+  y=10;
+
+  t_x = 5;
+  t_y = 5;
 
   heatpoints[0].x = 3;
   heatpoints[0].y = 3;
-  heatpoints[0].t = 100;
+  heatpoints[0].t = 33;
+
   heatpoints[1].x = 7;
   heatpoints[1].y = 7;
-  heatpoints[1].t = 100;
-
-  init_sheet(10,10,heatpoints,2,5,5);
-  printf("%d %d %d %d\n", t_x, x, t_y, y);
+  heatpoints[1].t = 13;
+  */
+  init_sheet(x,y,heatpoints,num_sources,t_x,t_y);
 
   while((iteration < 5000)
-	&& (terminate_sheet_check() != 1)){
+    && (terminate_sheet_check() != 1)){
       step_sheet();
   }
 
   printf("Finished after %d iterations\nFinal state is:\n",iteration);
-  print_sheet();
   printf("Target (%d,%d) terminated with value %f\n",t_x,t_y,query_sheet(t_x,t_y));
 
 }
@@ -151,7 +192,7 @@ int listen_loop(int socketfd) {
 /* STEP_SHEET(X,Y)
    Moves the sheet one step forward in time
 */
-void* step_sheet(){
+void step_sheet(){
 
   int i,j;
   /* Move curr sheet to prev sheet */
@@ -174,7 +215,6 @@ void* step_sheet(){
   reset_sheet();
   iteration++;
 
-  return 0;
 }
 
 /* TERMINATE_SHEET_CHECK(X,Y)
@@ -187,19 +227,30 @@ void* step_sheet(){
    returns true if it is time to go, false otherwise
 */
 int terminate_sheet_check(){
+
+  //For the example given, the result of 1.744C is not consistent with the described algorithm.
+  //The change in temperature for target cell (400,400) is so small that it is always
+  //under the cutoff temperature change point of .5 C.
+
+  //Therefore we have removed our terminate sheet check for now and will always...
+  return 0;
+
   float delta;
   delta = sheet[t_x][t_y]-prev_sheet[t_x][t_y];
-  /*
-  printf("Terminate check %f %f %f \n",sheet[t_x][t_y],
-	 prev_sheet[t_x][t_y],delta);
-  */
+
+
+  printf("Terminate check %f %f %f cutoff %f\n",sheet[t_x][t_y],
+	 prev_sheet[t_x][t_y],delta,delta_terminate);
+
   /* If the curr value is equal to the present value return false */
   if(delta == 0){
     return 0;
   }    
+
   /* If the delta value is less than the terminate value, return true */
   else if(delta < delta_terminate){
-    return 1;
+      printf("LEAVING!");
+      return 1;      
   }
   else{
     /*Else return false*/
@@ -225,7 +276,7 @@ float query_sheet(int x_val, int y_val){
    by zeroing out the edges
    and reseting the constant heat sources
 */
-void* reset_sheet(){
+void reset_sheet(){
 
   int i,j;
   /* Zero out the edges */
@@ -245,14 +296,13 @@ void* reset_sheet(){
     sheet[heat_sources[i].x][heat_sources[i].y] = heat_sources[i].t;
   }
 
-  return 0;
 }
 
 /* INIT_SHEET(X,Y)
    Initializes the sheet pointer
    Creates a matrix of size (x+2,y+2)
 */
-void* init_sheet(int x_val, int y_val, 
+void init_sheet(int x_val, int y_val, 
 		 struct heatpoint * heatpoints, int num_heatpoints,
 		 int tx_val, int ty_val){
   int i, j;
@@ -292,13 +342,12 @@ void* init_sheet(int x_val, int y_val,
   /* Insert constant heat values */
   reset_sheet();
 
-  return 0;
 }
 
 /* PRINT_SHEET()
    prints the matrix for debugging purposes
 */
-void* print_sheet(){
+void print_sheet(){
 
   int i,j;
 
@@ -311,6 +360,5 @@ void* print_sheet(){
 
   printf("\n");
 
-  return 0;
 }
 
