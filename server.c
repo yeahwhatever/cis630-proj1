@@ -25,10 +25,6 @@
 #define DEBUG 0
 #define BUFSIZE 100
 
-void test_temperature();
-char* create_test();
-float run_sheet(struct sheet *s);
-
 int main(int argc, char *argv[]) {
 	int status, socketfd, yes=1;
 	struct addrinfo hints, *servinfo, *p;
