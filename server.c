@@ -205,8 +205,14 @@ int listen_loop(int socketfd) {
 	}
 	struct sheet *s = init_sheet(width, height, hps, num_heat);
 	free(hps);
-	float ff = run_sheet(s, width, height);
-	printf("result: %f\n", ff);
+
+	if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+		perror("recv");
+	buf[num_bytes] = '\0';
+
+	printf("Received query.\n");
+	parseJsonQuery(buf, &x_v, &y_v);
+	float ff = run_sheet(s, x_v, y_v);
 	sprintf(final_val, "%.6f", ff);
 	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
 		perror("send");	
@@ -347,6 +353,7 @@ struct sheet* init_sheet(int x_val, int y_val,
   struct sheet *s = xmalloc(sizeof(struct sheet));
 
   s->num_heat = num_heatpoints;
+  s->checked = 0;
   s->hps = xmalloc(num_heatpoints * sizeof(struct heatpoint));
   for(i = 0; i < num_heatpoints; i++){
     s->hps[i].x = heatpoints[i].x;

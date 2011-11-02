@@ -43,7 +43,7 @@ char* mkJson(int x, int y, int num_heat, struct heatpoint *hps ) {
 
 char* mkJsonQuery(int x, int y) {
 	char* str = xmalloc(512 * sizeof(char));
-	sprintf(str, "{ x: %d, y: %d}", x, y);
+	sprintf(str, "{ x: %d, y: %d, }", x, y);
 	return str;
 }
 
@@ -206,11 +206,11 @@ void parseJsonQuery( char* json, int *x, int *y) {
 			case '8':
 			case '9':
 				nstart = i;
-				while(json[i] != ' ') {
+				while(json[i] != ' ' && json[i] != ',') {
 					i++;
 				}
 				char* numStr = xmalloc(i-nstart);
-				strncpy(numStr, json+nstart, i-nstart-1);
+				strncpy(numStr, json+nstart, i-nstart);
 				if(getX) {
 					*x = atoi(numStr);
 					getX = 0;

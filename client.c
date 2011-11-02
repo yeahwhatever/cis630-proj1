@@ -155,8 +155,20 @@ int recv_loop(int socketfd) {
 			if (send(socketfd, json, strlen(json), 0) == -1)
 				perror("send");
 
+			printf("Point ('X Y') to query?\n");
+			fgets(buf, LINE, stdin);
+
+			parse_two(buf, &query_x, &query_y);
 #if DEBUG > 0
-			printf("Awaiting server response.");
+			printf("Query point: %d, %d\n", query_x, query_y);
+#endif
+			if(query_x == 0 && query_y == 0) break;
+			json = mkJsonQuery(query_x, query_y);
+
+			if (send(socketfd, json, strlen(json), 0) == -1)
+				perror("send");
+#if DEBUG > 0
+			printf("Awaiting server response.\n");
 #endif
 			free(json);
 
