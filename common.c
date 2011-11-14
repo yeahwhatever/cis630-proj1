@@ -140,6 +140,7 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 				getT = 1;
 				i++;
 				break;
+			case '-':
 			case '0':
 			case '1':
 			case '2':
@@ -197,6 +198,7 @@ void parseJsonQuery( char* json, int *x, int *y) {
 				getY = 1;
 				i++;
 				break;
+			case '-':
 			case '0':
 			case '1':
 			case '2':
