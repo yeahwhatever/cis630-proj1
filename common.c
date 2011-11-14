@@ -75,11 +75,12 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 			case '8':
 			case '9':
 				nstart = i;
-				while(json[i] != ' ') {
+				while(json[i] != ' ' ) {
 					i++;
 				}
 				numStr = xmalloc(i-nstart);
 				strncpy(numStr, json+nstart, i-nstart-1);
+				numStr[i-nstart-1] = '\0';
 				if(getX) {
 					*width = atoi(numStr);
 					getX = 0;
@@ -155,6 +156,7 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 				}
 				numStr = xmalloc(i-nstart);
 				strncpy(numStr, json+nstart, i-nstart-1);
+				numStr[i-nstart-1] = '\0';
 				if(getX) {
 					hps[j].x = atoi(numStr);
 					getX = 0;
@@ -211,6 +213,7 @@ void parseJsonQuery( char* json, int *x, int *y) {
 				}
 				numStr = xmalloc(i-nstart);
 				strncpy(numStr, json+nstart, i-nstart);
+				numStr[i-nstart] = '\0';
 				if(getX) {
 					*x = atoi(numStr);
 					getX = 0;

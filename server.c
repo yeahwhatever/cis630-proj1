@@ -22,7 +22,7 @@
 #include "common.h"
 
 #define BACKLOG 10
-#define DEBUG 0
+#define DEBUG 1
 #define BUFSIZE 512
 
 int main(int argc, char *argv[]) {
@@ -95,6 +95,7 @@ int listen_loop(int socketfd) {
 	struct sheet *s;
 	struct heatpoint *hps;
 	int client_fd, num_bytes, x_v, y_v, width, height, num_heat;
+	int i;
 	float ff;
 	char buf[BUFSIZE], final_val[100];
 

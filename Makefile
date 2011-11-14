@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -W -g -ansi -pedantic -Werror
+CFLAGS = -Wall -W -g
 
 # For solaris
 #LL = -lsocket -lnsl
