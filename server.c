@@ -143,7 +143,7 @@ int listen_loop(int socketfd) {
 
 		printf("Received:\n%s\n", buf);
 
-		for(i = 1; i < numprocs; i++) {
+/*		for(i = 1; i < numprocs; i++) {
 			MPI_Send(&num_bytes, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 			MPI_Send(&buf, num_bytes, MPI_CHAR, i, 1, MPI_COMM_WORLD);
 
@@ -153,29 +153,27 @@ int listen_loop(int socketfd) {
 		printf("Rank: %d received num_bytes: %d\n", rank, num_bytes);
 		MPI_Recv(&buf, num_bytes, MPI_CHAR, 0, 1, MPI_COMM_WORLD, &Stat); 
 		printf("Rank: %d received buf: \n%s\n", rank, buf);
+*/
 
-
-	}
-	/** 
-	 * Parse the json query into height, width, and number of heat sources
-	 */
-	hps = parseJson(buf, &width, &height, &num_heat);
+		/** 
+		 * Parse the json query into height, width, and number of heat sources
+		 */
+		hps = parseJson(buf, &width, &height, &num_heat);
 
 #if DEBUG > 0
-	for(i = 0; i < num_heat; i++) {
-		printf("x: %d, y: %d, t: %f\n",hps[i].x, hps[i].y, hps[i].t);
+		for(i = 0; i < num_heat; i++) {
+			printf("x: %d, y: %d, t: %f\n",hps[i].x, hps[i].y, hps[i].t);
 
-	}
+		}
 #endif 
-	/**
-	 * Init our sheet from the values we parse, and free those, as we don't
-	 * need them anymore
-	 */
+		/**
+		 * Init our sheet from the values we parse, and free those, as we don't
+		 * need them anymore
+		 */
 
-	s = init_sheet(width, height, hps, num_heat);
-	free(hps);
+		s = init_sheet(width, height, hps, num_heat);
+		free(hps);
 
-	if(rank == 0) {
 
 		/**
 		 *
@@ -187,11 +185,12 @@ int listen_loop(int socketfd) {
 
 		parseJsonQuery(buf, &x_v, &y_v);
 		printf("Received query (%d, %d)\n", x_v, y_v);
-
+	}
 		/**
 		 * Run the sheet with the specified values, and return the results
 		 */
 		ff = run_sheet(s, x_v, y_v);
+	if(rank == 0) {
 		sprintf(final_val, "%.6f", ff);
 
 		if(send(client_fd, final_val, strlen(final_val), 0) == -1)
@@ -255,108 +254,139 @@ float run_sheet(struct sheet *s, int x, int y) {
    Moves the sheet one step forward in time
 */
 void step_sheet(struct sheet *s){
-  int i,j;
+  int i, j, k, rank, numprocs, len, row_spot, col_spot;
+  MPI_Status Stat;
   float delta = 0, big_delta = 0;
 
-  /* Move curr sheet to prev sheet */
-  for(i=0; i < s->x; i++){
-    for(j=0; j < s->y; j++){
-      s->prev_sheet[i][j] = s->sheet[i][j];
-    }
-  }
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 
-  for(i=1; i < (s->x-1); i++){
-    for(j=1; j < (s->y-1); j++){
-      s->sheet[i][j] = (s->prev_sheet[i][j]
-		     + s->prev_sheet[i-1][j]
-		     + s->prev_sheet[i][j-1]
-		     + s->prev_sheet[i+1][j]
-		     + s->prev_sheet[i][j+1]) / 5.0;
 
-    }
-  }
 
-  /**
-   * We need to reset before we look for the largest change...
-   */
-  reset_sheet(s);
+	if(rank == 0) {
 
-  /**
-   * Get the largest change in the sheet and test if its smaller than our
-   * terminate case, if it is we set our finished flag.
-   */
-  for(i=1; i < (s->x-1); i++){
-    for(j=1; j < (s->y-1); j++){
-	  delta = s->sheet[i][j] - s->prev_sheet[i][j];
-	  if (delta > big_delta)
-		  big_delta = delta;
+		for(i = 1; i < numprocs; i++ ) {
+			MPI_Send(&s->x, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+		}
+		/* Move curr sheet to prev sheet */
+		for(i=0; i < s->x; i++){
+			for(j=0; j < s->y; j++){
+				s->prev_sheet[i][j] = s->sheet[i][j];
+			}
+		}
+
+		float *full_row = xmalloc(sizeof(int) * s->x * 3);
+		//Going through every row in the table
+		for(i = 0; i < s->y-2; i++) {
+			//For iterating through the 3 rows in a row. So, it should first be
+			//row 0, 1, 2, concatenated together.
+			for(j = 0; j < 3; j++) {
+				for(k = 0; k < s->x; k++) {
+					row_spot = j * s->x + k;
+					col_spot = j + i;
+					full_row[row_spot] = s->prev_sheet[k][col_spot];
+				}
+
+			}
+		}
+		/*for(i=1; i < (s->x-1); i++){
+			for(j=1; j < (s->y-1); j++){
+				s->sheet[i][j] = (s->prev_sheet[i][j]
+						+ s->prev_sheet[i-1][j]
+						+ s->prev_sheet[i][j-1]
+						+ s->prev_sheet[i+1][j]
+						+ s->prev_sheet[i][j+1]) / 5.0;
+
+			}
+		}*/
+
+		/**
+		 * We need to reset before we look for the largest change...
+		 */
+		reset_sheet(s);
+
+		/**
+		 * Get the largest change in the sheet and test if its smaller than our
+		 * terminate case, if it is we set our finished flag.
+		 */
+		for(i=1; i < (s->x-1); i++){
+			for(j=1; j < (s->y-1); j++){
+				delta = s->sheet[i][j] - s->prev_sheet[i][j];
+				if (delta > big_delta)
+					big_delta = delta;
+			}
+		}
+
+		if (big_delta < DELTA_TERMINATE)
+			s->checked = 1;
+	} else {
+
+		MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
+
+
 	}
-  }
-
-  if (big_delta < DELTA_TERMINATE)
-	  s->checked = 1;
 
 }
 
 /* STEP_SHEET(X,Y)
    Checks the current heat value of the sheet
    at the specified point
-*/
+   */
 float query_sheet(struct sheet *s, int x_val, int y_val){
-  if(x_val+1 < s->x && y_val+1 < s->y){
-    return s->sheet[x_val + 1][y_val + 1];
-  }
-  else{
-    return -1;
-  }
+	if(x_val+1 < s->x && y_val+1 < s->y){
+		return s->sheet[x_val + 1][y_val + 1];
+	}
+	else{
+		return -1;
+	}
 }
 
 /* RESET_SHEET()
    Prepares sheet for the next iteration
    by zeroing out the edges
    and reseting the constant heat sources
-*/
+   */
 void reset_sheet(struct sheet *s){
-  int i,j;
+	int i,j;
 
-  /* Zero out the edges */
-  j = s->y - 1;
-  for(i = 0;i < s->x; i++){
-    s->sheet[i][0] = 0;
-    s->sheet[i][j] = 0;
-  }
-  i = s->x - 1;
-  for(j = 0; j< s->y; j++){
-    s->sheet[0][j] = 0;
-    s->sheet[i][j] = 0;
-  }
+	/* Zero out the edges */
+	j = s->y - 1;
+	for(i = 0;i < s->x; i++){
+		s->sheet[i][0] = 0;
+		s->sheet[i][j] = 0;
+	}
+	i = s->x - 1;
+	for(j = 0; j< s->y; j++){
+		s->sheet[0][j] = 0;
+		s->sheet[i][j] = 0;
+	}
 
-  /* Reset constant heat sources */
-  for(i = 0; i < s->num_heat; i++){
-  	s->sheet[s->hps[i].x+1][s->hps[i].y+1] = s->hps[i].t;
-  }
+	/* Reset constant heat sources */
+	for(i = 0; i < s->num_heat; i++){
+		s->sheet[s->hps[i].x+1][s->hps[i].y+1] = s->hps[i].t;
+	}
 
 }
 
 /* INIT_SHEET
    Initializes the sheet pointer
    Creates a matrix of size (x+2,y+2)
-*/
+   */
 struct sheet* init_sheet(int x_val, int y_val, 
-		 struct heatpoint * heatpoints, int num_heatpoints){
-  int i, j;
+		struct heatpoint * heatpoints, int num_heatpoints){
+	int i, j;
 
-  struct sheet *s = xmalloc(sizeof(struct sheet));
+	struct sheet *s = xmalloc(sizeof(struct sheet));
 
-  s->num_heat = num_heatpoints;
-  s->checked = 0;
-  s->hps = xmalloc(num_heatpoints * sizeof(struct heatpoint));
-  for(i = 0; i < num_heatpoints; i++){
-    s->hps[i].x = heatpoints[i].x;
-    s->hps[i].y = heatpoints[i].y;
-    s->hps[i].t = heatpoints[i].t;
-  }
-  
+	s->num_heat = num_heatpoints;
+	s->checked = 0;
+	s->hps = xmalloc(num_heatpoints * sizeof(struct heatpoint));
+	for(i = 0; i < num_heatpoints; i++){
+		s->hps[i].x = heatpoints[i].x;
+		s->hps[i].y = heatpoints[i].y;
+		s->hps[i].t = heatpoints[i].t;
+	}
+
   /* Initialize past and present sheets */
   s->x = x_val + 2;
   s->y = y_val + 2;
