@@ -274,7 +274,7 @@ void slave_compute() {
    Moves the sheet one step forward in time
 */
 void step_sheet(struct sheet *s){
-  int i, j, k, rank, numprocs, row_spot, col_spot;
+  int i, j, k, rank, numprocs, row_spot, col_spot, which_proc;
   float delta = 0, big_delta = 0;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -293,31 +293,42 @@ void step_sheet(struct sheet *s){
 		}
 	}
 
-	float *full_row = xmalloc(sizeof(int) * s->x * 3);
-	//Going through every row in the table
-	for(i = 0; i < s->y-2; i++) {
-		//For iterating through the 3 rows in a row. So, it should first be
-		//row 0, 1, 2, concatenated together.
-		for(j = 0; j < 3; j++) {
-			for(k = 0; k < s->x; k++) {
-				row_spot = j * s->x + k;
-				col_spot = j + i;
-				full_row[row_spot] = s->prev_sheet[k][col_spot];
-			}
+	if(numprocs > 0) {
+		float *full_row = xmalloc(sizeof(int) * s->x * 3);
+		which_proc = 0;
+		//Going through every row in the table
+		for(i = 0; i < s->y-2; i++) {
+			//For iterating through the 3 rows in a row. So, it should first be
+			//row 0, 1, 2, concatenated together.
+			for(j = 0; j < 3; j++) {
+				for(k = 0; k < s->x; k++) {
+					row_spot = j * s->x + k;
+					col_spot = j + i;
+					full_row[row_spot] = s->prev_sheet[k][col_spot];
+				}
 
+			}
+			which_proc++;
+			if(which_proc >= numprocs) {
+				which_proc = 1;
+			}
+			
+			MPI_Send(&full_row, 3*s->x, MPI_FLOAT, which_proc, 1, MPI_COMM_WORLD);
+
+
+		}
+	} else {
+		for(i=1; i < (s->x-1); i++){
+			for(j=1; j < (s->y-1); j++){
+				s->sheet[i][j] = (s->prev_sheet[i][j]
+						+ s->prev_sheet[i-1][j]
+						+ s->prev_sheet[i][j-1]
+						+ s->prev_sheet[i+1][j]
+						+ s->prev_sheet[i][j+1]) / 5.0;
+
+			}
 		}
 	}
-	/*for(i=1; i < (s->x-1); i++){
-		for(j=1; j < (s->y-1); j++){
-			s->sheet[i][j] = (s->prev_sheet[i][j]
-					+ s->prev_sheet[i-1][j]
-					+ s->prev_sheet[i][j-1]
-					+ s->prev_sheet[i+1][j]
-					+ s->prev_sheet[i][j+1]) / 5.0;
-
-		}
-	}*/
-
 	/**
 	 * We need to reset before we look for the largest change...
 	 */
