@@ -1,10 +1,11 @@
-CC = gcc
+CC = mpicc
+
 
 CFLAGS = -Wall -W -g
 
 # For solaris
-LL = -lsocket -lnsl
-#LL = 
+#LL = -lsocket -lnsl
+LL = 
 
 all: client server
 

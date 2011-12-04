@@ -5,7 +5,7 @@
 
 int listen_loop(int);
 
-#define DELTA_TERMINATE 0.1
+#define DELTA_TERMINATE 0.5
 
 
 void test_temperature();

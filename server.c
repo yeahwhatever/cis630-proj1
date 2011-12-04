@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <mpi.h>
 
 #include <unistd.h>
 #include <errno.h>
@@ -96,6 +97,7 @@ int listen_loop(int socketfd) {
 	struct heatpoint *hps;
 	int client_fd, num_bytes, x_v, y_v, width, height, num_heat;
 	int i;
+	int numprocs, rank;
 	float ff;
 	char buf[BUFSIZE], final_val[100];
 
