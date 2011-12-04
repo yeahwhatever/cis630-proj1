@@ -18,6 +18,9 @@ void row_worker(float data[], int l) {
 		sheet[2][i] = data[row_length * 2 + i];
 	}
 
+	ret[0] = 0;
+	ret[row_length - 1] = 0;
+
 	for (i = 1; i < row_length - 1; i++)
 		ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+i]) / 5.0;
 
