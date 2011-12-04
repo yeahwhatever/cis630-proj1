@@ -111,7 +111,6 @@ int listen_loop(int socketfd) {
 	int i, rank, numprocs;
 	float ff;
 	char buf[BUFSIZE], final_val[100];
-	MPI_Status Stat;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
@@ -186,10 +185,20 @@ int listen_loop(int socketfd) {
 		parseJsonQuery(buf, &x_v, &y_v);
 		printf("Received query (%d, %d)\n", x_v, y_v);
 	}
+	if(rank == 0) {
+
+
+
 		/**
 		 * Run the sheet with the specified values, and return the results
+		 *
 		 */
 		ff = run_sheet(s, x_v, y_v);
+	} else {
+
+		slave_compute();
+
+	}
 	if(rank == 0) {
 		sprintf(final_val, "%.6f", ff);
 
@@ -250,12 +259,22 @@ float run_sheet(struct sheet *s, int x, int y) {
 }
 
 
+
+void slave_compute() {
+	int len;
+	MPI_Status Stat;
+
+
+	MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
+
+
+
+}
 /* STEP_SHEET()
    Moves the sheet one step forward in time
 */
 void step_sheet(struct sheet *s){
-  int i, j, k, rank, numprocs, len, row_spot, col_spot;
-  MPI_Status Stat;
+  int i, j, k, rank, numprocs, row_spot, col_spot;
   float delta = 0, big_delta = 0;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -263,68 +282,61 @@ void step_sheet(struct sheet *s){
 
 
 
-	if(rank == 0) {
 
-		for(i = 1; i < numprocs; i++ ) {
-			MPI_Send(&s->x, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
-		}
-		/* Move curr sheet to prev sheet */
-		for(i=0; i < s->x; i++){
-			for(j=0; j < s->y; j++){
-				s->prev_sheet[i][j] = s->sheet[i][j];
-			}
-		}
-
-		float *full_row = xmalloc(sizeof(int) * s->x * 3);
-		//Going through every row in the table
-		for(i = 0; i < s->y-2; i++) {
-			//For iterating through the 3 rows in a row. So, it should first be
-			//row 0, 1, 2, concatenated together.
-			for(j = 0; j < 3; j++) {
-				for(k = 0; k < s->x; k++) {
-					row_spot = j * s->x + k;
-					col_spot = j + i;
-					full_row[row_spot] = s->prev_sheet[k][col_spot];
-				}
-
-			}
-		}
-		/*for(i=1; i < (s->x-1); i++){
-			for(j=1; j < (s->y-1); j++){
-				s->sheet[i][j] = (s->prev_sheet[i][j]
-						+ s->prev_sheet[i-1][j]
-						+ s->prev_sheet[i][j-1]
-						+ s->prev_sheet[i+1][j]
-						+ s->prev_sheet[i][j+1]) / 5.0;
-
-			}
-		}*/
-
-		/**
-		 * We need to reset before we look for the largest change...
-		 */
-		reset_sheet(s);
-
-		/**
-		 * Get the largest change in the sheet and test if its smaller than our
-		 * terminate case, if it is we set our finished flag.
-		 */
-		for(i=1; i < (s->x-1); i++){
-			for(j=1; j < (s->y-1); j++){
-				delta = s->sheet[i][j] - s->prev_sheet[i][j];
-				if (delta > big_delta)
-					big_delta = delta;
-			}
-		}
-
-		if (big_delta < DELTA_TERMINATE)
-			s->checked = 1;
-	} else {
-
-		MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
-
-
+	for(i = 1; i < numprocs; i++ ) {
+		MPI_Send(&s->x, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 	}
+	/* Move curr sheet to prev sheet */
+	for(i=0; i < s->x; i++){
+		for(j=0; j < s->y; j++){
+			s->prev_sheet[i][j] = s->sheet[i][j];
+		}
+	}
+
+	float *full_row = xmalloc(sizeof(int) * s->x * 3);
+	//Going through every row in the table
+	for(i = 0; i < s->y-2; i++) {
+		//For iterating through the 3 rows in a row. So, it should first be
+		//row 0, 1, 2, concatenated together.
+		for(j = 0; j < 3; j++) {
+			for(k = 0; k < s->x; k++) {
+				row_spot = j * s->x + k;
+				col_spot = j + i;
+				full_row[row_spot] = s->prev_sheet[k][col_spot];
+			}
+
+		}
+	}
+	/*for(i=1; i < (s->x-1); i++){
+		for(j=1; j < (s->y-1); j++){
+			s->sheet[i][j] = (s->prev_sheet[i][j]
+					+ s->prev_sheet[i-1][j]
+					+ s->prev_sheet[i][j-1]
+					+ s->prev_sheet[i+1][j]
+					+ s->prev_sheet[i][j+1]) / 5.0;
+
+		}
+	}*/
+
+	/**
+	 * We need to reset before we look for the largest change...
+	 */
+	reset_sheet(s);
+
+	/**
+	 * Get the largest change in the sheet and test if its smaller than our
+	 * terminate case, if it is we set our finished flag.
+	 */
+	for(i=1; i < (s->x-1); i++){
+		for(j=1; j < (s->y-1); j++){
+			delta = s->sheet[i][j] - s->prev_sheet[i][j];
+			if (delta > big_delta)
+				big_delta = delta;
+		}
+	}
+
+	if (big_delta < DELTA_TERMINATE)
+		s->checked = 1;
 
 }
 

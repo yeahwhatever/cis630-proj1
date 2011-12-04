@@ -17,5 +17,6 @@ struct sheet* init_sheet(int,int,struct heatpoint*,int);
 void reset_sheet( struct sheet *s);
 void print_sheet(struct sheet *s);
 void free_sheet(struct sheet *s);
+void slave_compute();
 
 #endif
