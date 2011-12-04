@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
 	int status, socketfd, yes=1;
 	struct addrinfo hints, *servinfo, *p;
 	char *host, *port;
+	int numprocs, rank;
 
 	if (argc != 3) {
 		printf("Usage: %s <host> <port>\n", argv[0]);
@@ -39,54 +40,65 @@ int main(int argc, char *argv[]) {
 		port = argv[2];
 	}
 
+
+	MPI_Init(&argc, &argv);
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC; 
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	if ((status = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
-		return 2;
-	}
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	/* loop through all the results and bind to the first we can */
-	for (p = servinfo; p != NULL; p = p->ai_next) {
-		if ((socketfd = socket(p->ai_family, p->ai_socktype,
-						p->ai_protocol)) == -1) {
-			perror("server: socket");
-			continue;
+	printf("Rank: %d, Numprocs: %d\n",rank, numprocs);
+
+	if(rank == 0) {
+		if ((status = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
+
+			fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+			return 2;
 		}
 
-		if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &yes,
-					sizeof(int)) == -1) {
-			perror("setsockopt");
+		/* loop through all the results and bind to the first we can */
+		for (p = servinfo; p != NULL; p = p->ai_next) {
+			if ((socketfd = socket(p->ai_family, p->ai_socktype,
+							p->ai_protocol)) == -1) {
+				perror("server: socket");
+				continue;
+			}
+
+			if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &yes,
+						sizeof(int)) == -1) {
+				perror("setsockopt");
+				exit(1);
+			}
+
+			if (bind(socketfd, p->ai_addr, p->ai_addrlen) == -1) {
+				close(socketfd);
+				perror("server: bind");
+				continue;
+			}
+
+			break;
+		}
+
+		if (p == NULL) {
+			fprintf(stderr, "listener: failed to bind socket\n");
+			return 3;
+		}
+
+
+		freeaddrinfo(servinfo);
+
+		if (listen(socketfd, BACKLOG) == -1) {
+			perror("listen");
 			exit(1);
 		}
 
-		if (bind(socketfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(socketfd);
-			perror("server: bind");
-			continue;
-		}
-
-		break;
 	}
-
-	if (p == NULL) {
-		fprintf(stderr, "listener: failed to bind socket\n");
-		return 3;
-	}
-
-
-	freeaddrinfo(servinfo);
-
-	if (listen(socketfd, BACKLOG) == -1) {
-		perror("listen");
-		exit(1);
-	}
-
 	status = listen_loop(socketfd);
 
+	MPI_Finalize();
 	return status;
 }
 
@@ -96,36 +108,54 @@ int listen_loop(int socketfd) {
 	struct sheet *s;
 	struct heatpoint *hps;
 	int client_fd, num_bytes, x_v, y_v, width, height, num_heat;
-	int i;
-	int numprocs, rank;
+	int i, rank, numprocs;
 	float ff;
 	char buf[BUFSIZE], final_val[100];
+	MPI_Status Stat;
 
-	sin_size = sizeof client_addr;
-	client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 
-	if (client_fd == -1)
-		perror("accept");
+	if(rank == 0) {
+		sin_size = sizeof client_addr;
 
-	if ((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
-		perror("recv");
-	buf[num_bytes] = '\0';
+		client_fd = accept(socketfd, (struct sockaddr *)&client_addr, &sin_size);
 
-	if (strcmp(buf, "hey")) {
-		fprintf(stderr, "Didn't get a 'hey'");
-		close(client_fd);
-		return 5;
+		if (client_fd == -1)
+			perror("accept");
+
+		if ((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+			perror("recv");
+		buf[num_bytes] = '\0';
+
+		if (strcmp(buf, "hey")) {
+			fprintf(stderr, "Didn't get a 'hey'");
+			close(client_fd);
+			return 5;
+		}
+
+		if (send(client_fd, "whatsup", 7, 0) == -1) 
+			perror("send");
+
+		if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+			perror("recv");
+		buf[num_bytes] = '\0';
+
+		printf("Received:\n%s\n", buf);
+
+		for(i = 1; i < numprocs; i++) {
+			MPI_Send(&num_bytes, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+			MPI_Send(&buf, num_bytes, MPI_CHAR, i, 1, MPI_COMM_WORLD);
+
+		}
+	} else {
+		MPI_Recv(&num_bytes, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
+		printf("Rank: %d received num_bytes: %d\n", rank, num_bytes);
+		MPI_Recv(&buf, num_bytes, MPI_CHAR, 0, 1, MPI_COMM_WORLD, &Stat); 
+		printf("Rank: %d received buf: \n%s\n", rank, buf);
+
+
 	}
-
-	if (send(client_fd, "whatsup", 7, 0) == -1) 
-		perror("send");
-
-	if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
-		perror("recv");
-	buf[num_bytes] = '\0';
-
-	printf("Received:\n%s\n", buf);
-
 	/** 
 	 * Parse the json query into height, width, and number of heat sources
 	 */
@@ -141,47 +171,52 @@ int listen_loop(int socketfd) {
 	 * Init our sheet from the values we parse, and free those, as we don't
 	 * need them anymore
 	 */
+
 	s = init_sheet(width, height, hps, num_heat);
 	free(hps);
 
-	/**
-	 * recv the first query and parse it
-	 */
-	if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
-		perror("recv");
-	buf[num_bytes] = '\0';
+	if(rank == 0) {
 
-	parseJsonQuery(buf, &x_v, &y_v);
-	printf("Received query (%d, %d)\n", x_v, y_v);
-
-	/**
-	 * Run the sheet with the specified values, and return the results
-	 */
-	ff = run_sheet(s, x_v, y_v);
-	sprintf(final_val, "%.6f", ff);
-
-	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
-		perror("send");	
-
-	/**
-	 * Loop forever returning points that the client queries
-	 */
-	while (1) {
+		/**
+		 *
+		 * recv the first query and parse it
+		 */
 		if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
 			perror("recv");
 		buf[num_bytes] = '\0';
 
 		parseJsonQuery(buf, &x_v, &y_v);
-		
-		if(x_v == 0 && y_v == 0) break;
+		printf("Received query (%d, %d)\n", x_v, y_v);
 
-		sprintf(final_val, "%.6f", query_sheet(s, x_v, y_v));
+		/**
+		 * Run the sheet with the specified values, and return the results
+		 */
+		ff = run_sheet(s, x_v, y_v);
+		sprintf(final_val, "%.6f", ff);
 
 		if(send(client_fd, final_val, strlen(final_val), 0) == -1)
 			perror("send");	
 
-	}
+		/**
+		 * Loop forever returning points that the client queries
+		 */
+		while (1) {
+			if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+				perror("recv");
+			buf[num_bytes] = '\0';
 
+			parseJsonQuery(buf, &x_v, &y_v);
+			
+			if(x_v == 0 && y_v == 0) break;
+
+			sprintf(final_val, "%.6f", query_sheet(s, x_v, y_v));
+
+			if(send(client_fd, final_val, strlen(final_val), 0) == -1)
+				perror("send");	
+
+		}
+
+	}
 	/**
 	 * Free the memory, close the client_fd, and start the loop over again
 	 * waiting for another connection
