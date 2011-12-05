@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 		}
 
 	} else {
-		row_worker();
+		slave_compute();
 	}
 
 	status = listen_loop(socketfd);
@@ -260,8 +260,9 @@ void slave_compute() {
 	MPI_Status stat;
 	MPI_Datatype send_type, recv_type;
 
-
+	printf("Getting row_length\n");
 	MPI_Recv(&row_length, 1, MPI_INT, 0, SIZE, MPI_COMM_WORLD, &stat);
+	printf("Received row_length: %d\n", row_length);
 
 	ret = xmalloc(row_length * sizeof(float));
 
@@ -270,8 +271,11 @@ void slave_compute() {
 	MPI_Type_contiguous(3 * row_length, MPI_FLOAT, &send_type);
 	MPI_Type_contiguous(row_length, MPI_FLOAT, &recv_type);
 
+	MPI_Type_commit(&send_type);
+	MPI_Type_commit(&recv_type);
 	while (1) {
-		MPI_Recv(&data, 1, send_type, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+		MPI_Recv(data, 1, send_type, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+		printf("Received data\n");
 		if (stat.MPI_TAG == WORK) {
 
 			for (i = 0; i < 3; i++)
@@ -347,16 +351,19 @@ void step_sheet(struct sheet *s){
 
 	MPI_Type_contiguous(3*s->x, MPI_FLOAT, &send_type);
 	MPI_Type_contiguous(s->x, MPI_FLOAT, &recv_type);
+	MPI_Type_commit(&send_type);
+	MPI_Type_commit(&recv_type);
 
 	sent = 0;
-
+	printf("Starting first loop\n");
 	for (i = 1; i < num_proc; i++) {
 		gen_minisheet(sent, s, full_row);
-		MPI_Send(&full_row, 1, send_type, i, WORK, MPI_COMM_WORLD);
+		MPI_Send(full_row, 1, send_type, i, WORK, MPI_COMM_WORLD);
 		map[i] = sent;
 		sent++;
 	}
 
+	printf("Starting second loop\n");
 	while (sent < (s->y - 2)) {
 		MPI_Recv(&row, 1, recv_type, MPI_ANY_SOURCE, RETURN, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
@@ -368,6 +375,7 @@ void step_sheet(struct sheet *s){
 		sent++;
 	}
 
+	printf("starting third loop\n");
 	for (i = 1; i < num_proc; i++) {
 		MPI_Recv(&row, 1, recv_type, i, RETURN, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
