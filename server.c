@@ -272,7 +272,7 @@ void row_worker() {
 	float *ret, *data;
 	MPI_Status stat;
 
-	MPI_Recv(&row_length, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &stat);
+	MPI_Recv(&row_length, 1, MPI_INT, 0, SIZE, MPI_COMM_WORLD, &stat);
 
 	ret = xmalloc(row_length * sizeof(float));
 
@@ -299,7 +299,7 @@ void row_worker() {
 				ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+i]) / 5.0;
 
 
-			/* send ret */
+			MPI_Send(&ret, row_length, MPI_FLOAT, 0, RETURN, MPI_COMM_WORLD);
 
 		} else if (stat.MPI_TAG == DIE) {
 			free(ret);
@@ -362,7 +362,7 @@ void step_sheet(struct sheet *s){
 	}
 
 	while (sent < (s->y - 2)) {
-		MPI_Recv(&row, s->x, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+		MPI_Recv(&row, s->x, MPI_FLOAT, MPI_ANY_SOURCE, RETURN, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
 			s->sheet[map[stat.MPI_SOURCE]][i] = row[i];
 		}
@@ -370,6 +370,14 @@ void step_sheet(struct sheet *s){
 		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
 		map[stat.MPI_SOURCE] = sent;
 		sent++;
+	}
+
+	for (i = 1; i < num_proc; i++) {
+		MPI_Recv(&row, s->x, MPI_FLOAT, i, RETURN, MPI_COMM_WORLD, &stat);
+		for (i = 0; i < s->x; i++) {
+			s->sheet[map[stat.MPI_SOURCE]][i] = row[i];
+		}
+		MPI_Send(&full_row, 0, MPI_FLOAT, stat.MPI_SOURCE, DIE, MPI_COMM_WORLD); 
 	}
 
 	free(map);

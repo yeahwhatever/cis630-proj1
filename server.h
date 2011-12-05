@@ -8,6 +8,8 @@ int listen_loop(int);
 #define DELTA_TERMINATE 0.5
 #define WORK 1
 #define DIE 0
+#define SIZE 1
+#define RETURN 2
 
 
 void test_temperature();
