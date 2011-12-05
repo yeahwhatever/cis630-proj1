@@ -309,15 +309,18 @@ void step_sheet(struct sheet *s){
 	for (i = 1; i < num_proc; i++) {
 		gen_minisheet(sent, s, full_row);
 		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, i, WORK, MPI_COMM_WORLD);
+		map[i] = sent;
 		sent++;
 	}
 
 	while (sent < s->y) {
 		MPI_Recv(&row, s->x, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
-		/* code to add row to current sheet! */
-		/* Need a way to know what row is being sent back */
+		for (i = 0; i < s->x; i++) {
+			s->curr_sheet[map[stat.MPI_SOURCE]][i] = row[i];
+		}
 		gen_minisheet(sent, s, full_row);
 		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
+		map[stat.MPI_SOURCE] = sent;
 		sent++;
 	}
 
