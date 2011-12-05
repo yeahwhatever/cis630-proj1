@@ -263,7 +263,7 @@ void slave_compute() {
 
 	printf("Getting row_length\n");
 	MPI_Recv(&row_length, 1, MPI_INT, 0, SIZE, MPI_COMM_WORLD, &stat);
-	//printf("Received row_length: %d\n", row_length);
+	printf("Received row_length: %d\n", row_length);
 
 	ret = xmalloc(row_length * sizeof(float));
 
@@ -277,9 +277,15 @@ void slave_compute() {
 	MPI_Type_commit(&send_type);
 	MPI_Type_commit(&recv_type);
 	while (1) {
+		//printf("Receiving data\n");
 		MPI_Recv(data, 1, send_type, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 		//printf("Received data\n");
+		//for(i = 0; i < 3 * row_length; i++) {
+			//printf("%2.2f ", data[i]);
+		//}
+		//printf("\n");
 		if (stat.MPI_TAG == WORK) {
+			//printf("Work\n");
 	/*		printf("RECEIVED Statement\n");
 			for(i = 0; i < 10; i++) {
 				printf("%2.2f ", data[i]);
@@ -295,20 +301,33 @@ void slave_compute() {
 			}
 			printf("\n");
 */
-			printf("RECEIVED Statement\n");
-			for(i = 0; i < 36; i++) {
-				printf("%2.2f ", data[i]);
-			}
-			printf("\n");
+			//printf("RECEIVED Statement\n");
+			//for(i = 0; i < 36; i++) {
+				//printf("%2.2f ", data[i]);
+			//}
+			//printf("\n");
 			for (i = 0; i < 3; i++)
 				sheet[i] = xmalloc(row_length * sizeof(float));
 
-			printf("row_length: %d\n", row_length);
+			//printf("row_length: %d\n", row_length);
 			for (i = 0; i < row_length; i++) {
 				sheet[0][i] = data[i];
 				sheet[1][i] = data[row_length + i];
 				sheet[2][i] = data[row_length * 2 + i];
 			}
+
+			//printf("INNER SHEET\n");
+
+			int j;
+			for(i = 0; i < 3; i++) {
+
+				for(j = 0; j < row_length; j++) {
+
+				//printf("%2.2f ", sheet[i][j]);
+				}
+			//printf("\n");
+			}
+			//printf("\n");
 
 			ret[0] = 0;
 			ret[row_length - 1] = 0;
@@ -316,9 +335,14 @@ void slave_compute() {
 			for (i = 1; i < row_length - 1; i++)
 				ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+1]) / 5.0;
 
-			//printf("Sending ret\n");
+			//printf("RETURN LINE\n");
+			for(i = 0; i < row_length; i++)
+				//printf("%2.2f ", ret[i]);
+			//printf("\n");
+
+			printf(".");
 			MPI_Ssend(ret, 1, recv_type, 0, RETURN, MPI_COMM_WORLD);
-			//printf("Sent ret\n");
+			printf(".");
 
 		} else if (stat.MPI_TAG == DIE) {
 			//printf("In DIE statement\n");
@@ -385,17 +409,17 @@ void step_sheet(struct sheet *s){
 
 	sent = 0;
 	int k;
-	printf("----------------------------------------------------\n");
-	printf("Starting first loop with num_proc: %d\n", num_proc);
+	//printf("--------------------------------------------------\n");
+	//printf("Starting first loop with num_proc: %d\n", num_proc);
 	for (i = 1; i < num_proc; i++) {
-		printf("Printing prev_sheet at %d\n", sent);
+		//printf("Printing prev_sheet at %d\n", sent);
 		for(j = sent; j < sent+3; j++) {
 			for(k = 0; k < 12; k++) {
-				printf("%2.2f ",s->prev_sheet[j][k]);
+				//printf("%2.2f ",s->prev_sheet[j][k]);
 
 			}
 		}
-		printf("\n");
+		//printf("\n");
 
 
 		for(j = 0; j < s->x * 3; j++) {
@@ -403,33 +427,34 @@ void step_sheet(struct sheet *s){
 		}
 		gen_minisheet(sent, s, full_row);
 
-		printf("AFTER Gen_minisheet at %d\n", sent);
-		for(j = 0; j < 10; j++) {
-			printf("%2.2f ", full_row[j]);
+		//printf("AFTER Gen_minisheet at %d\n", sent);
+		for(j = 0; j < 12; j++) {
+			//printf("%2.2f ", full_row[j]);
 		}
-		printf("\n");
-		for(j = 10; j < 20; j++) {
-			printf("%2.2f ", full_row[j]);
+		//printf("\n");
+		for(j = 12; j < 24; j++) {
+			//printf("%2.2f ", full_row[j]);
 		}
-		printf("\n");
-		for(j = 20; j < 30; j++) {
-			printf("%2.2f ", full_row[j]);
+		//printf("\n");
+		for(j = 24; j < 36; j++) {
+			//printf("%2.2f ", full_row[j]);
 		}
-		printf("\n");
+		//printf("\n");
 		for(j = 0; j < 36; j++) {
-			printf("%2.2f ", full_row[j]);
+			//printf("%2.2f ", full_row[j]);
 		}
-		printf("\n");
+		//printf("\n");
 		
 		MPI_Ssend(full_row, 1, send_type, i, WORK, MPI_COMM_WORLD);
-		map[i] = sent;
+		map[i] = sent+1;
 		sent++;
 	}
 
-	printf("Starting second loop\n");
+	//printf("Starting second loop\n");
 	while (sent < (s->y - 2)) {
-		//printf("*** Received data\n");
+		//printf("*** Receiving data\n");
 		MPI_Recv(row, 1, recv_type, MPI_ANY_SOURCE, RETURN, MPI_COMM_WORLD, &stat);
+		//printf("*** Received data\n");
 		for (i = 0; i < s->x; i++) {
 			s->sheet[map[stat.MPI_SOURCE]][i] = row[i];
 		}
@@ -437,7 +462,7 @@ void step_sheet(struct sheet *s){
 		//printf("*** Sending new row\n");
 		MPI_Ssend(full_row, 1, send_type, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
 		//printf("*** Sent new row\n");
-		map[stat.MPI_SOURCE] = sent;
+		map[stat.MPI_SOURCE] = sent+1;
 		//printf("*** mapped!\n");
 		//printf("*** sent: %d\n", sent);
 		sent++;
@@ -446,7 +471,7 @@ void step_sheet(struct sheet *s){
 	for(i = 0; i < num_proc; i++) {
 		//printf("map %d: %d\n", i, map[i]);
 	}
-	printf("starting third loop\n");
+	//printf("starting third loop\n");
 	for (i = 1; i < num_proc; i++) {
 		//printf("* Receiving row in 3rd loop\n");
 		//printf("* sent: %d\n", sent);
