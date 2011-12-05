@@ -271,6 +271,10 @@ void row_worker() {
 	float **sheet;
 	float *ret, *data;
 	MPI_Status stat;
+	MPI_Type send_type, recv_type;
+
+	MPI_Type_contiguous(3*s->x, MPI_FLOAT, &send_type);
+	MPI_Type_contiguous(s->x, MPI_FLOAT, &recv_type);
 
 	MPI_Recv(&row_length, 1, MPI_INT, 0, SIZE, MPI_COMM_WORLD, &stat);
 
@@ -360,7 +364,7 @@ void step_sheet(struct sheet *s){
 
 	for (i = 1; i < num_proc; i++) {
 		gen_minisheet(sent, s, full_row);
-		MPI_Send(&full_row, 1, type, i, WORK, MPI_COMM_WORLD);
+		MPI_Send(&full_row, 1, send_type, i, WORK, MPI_COMM_WORLD);
 		map[i] = sent;
 		sent++;
 	}
