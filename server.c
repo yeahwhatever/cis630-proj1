@@ -636,12 +636,21 @@ void print_sheet(struct sheet *s){
 void free_sheet(struct sheet *s) {
 	int i;
 
+	printf("1");
 	free(s->hps);
+	printf("2");
 	for (i = 0; i< s->x; i++) {
+		printf("i: %d 7", i);
 		free(s->sheet[i]);
+		printf("i: %d 8", i);
 		free(s->prev_sheet[i]);
+		printf("i: %d 9", i);
 	}
+	printf("3");
 	free(s->sheet);
+	printf("4");
 	free(s->prev_sheet);
+	printf("5");
 	free(s);
+	printf("6");
 }
