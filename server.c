@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
 	printf("Rank: %d, Numprocs: %d\n",rank, numprocs);
 
-	if(rank == 0) {
+	if (rank == 0) {
 		if ((status = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
 
 			fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
@@ -95,7 +95,10 @@ int main(int argc, char *argv[]) {
 			exit(1);
 		}
 
+	} else {
+		slave_compute();
 	}
+
 	status = listen_loop(socketfd);
 
 	MPI_Finalize();
@@ -142,17 +145,17 @@ int listen_loop(int socketfd) {
 
 		printf("Received:\n%s\n", buf);
 
-/*		for(i = 1; i < numprocs; i++) {
-			MPI_Send(&num_bytes, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
-			MPI_Send(&buf, num_bytes, MPI_CHAR, i, 1, MPI_COMM_WORLD);
+		/*		for(i = 1; i < numprocs; i++) {
+				MPI_Send(&num_bytes, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+				MPI_Send(&buf, num_bytes, MPI_CHAR, i, 1, MPI_COMM_WORLD);
 
-		}
-	} else {
-		MPI_Recv(&num_bytes, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
-		printf("Rank: %d received num_bytes: %d\n", rank, num_bytes);
-		MPI_Recv(&buf, num_bytes, MPI_CHAR, 0, 1, MPI_COMM_WORLD, &Stat); 
-		printf("Rank: %d received buf: \n%s\n", rank, buf);
-*/
+				}
+				} else {
+				MPI_Recv(&num_bytes, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
+				printf("Rank: %d received num_bytes: %d\n", rank, num_bytes);
+				MPI_Recv(&buf, num_bytes, MPI_CHAR, 0, 1, MPI_COMM_WORLD, &Stat); 
+				printf("Rank: %d received buf: \n%s\n", rank, buf);
+				*/
 
 		/** 
 		 * Parse the json query into height, width, and number of heat sources
@@ -185,44 +188,35 @@ int listen_loop(int socketfd) {
 		parseJsonQuery(buf, &x_v, &y_v);
 		printf("Received query (%d, %d)\n", x_v, y_v);
 	}
-	if(rank == 0) {
 
 
+	/**
+	 * Run the sheet with the specified values, and return the results
+	 *
+	 */
+	ff = run_sheet(s, x_v, y_v);
 
-		/**
-		 * Run the sheet with the specified values, and return the results
-		 *
-		 */
-		ff = run_sheet(s, x_v, y_v);
-	} else {
+	sprintf(final_val, "%.6f", ff);
 
-		slave_compute();
+	if(send(client_fd, final_val, strlen(final_val), 0) == -1)
+		perror("send");	
 
-	}
-	if(rank == 0) {
-		sprintf(final_val, "%.6f", ff);
+	/**
+	 * Loop forever returning points that the client queries
+	 */
+	while (1) {
+		if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
+			perror("recv");
+		buf[num_bytes] = '\0';
+
+		parseJsonQuery(buf, &x_v, &y_v);
+
+		if(x_v == 0 && y_v == 0) break;
+
+		sprintf(final_val, "%.6f", query_sheet(s, x_v, y_v));
 
 		if(send(client_fd, final_val, strlen(final_val), 0) == -1)
 			perror("send");	
-
-		/**
-		 * Loop forever returning points that the client queries
-		 */
-		while (1) {
-			if((num_bytes = recv(client_fd, buf, BUFSIZE-1, 0)) == -1)
-				perror("recv");
-			buf[num_bytes] = '\0';
-
-			parseJsonQuery(buf, &x_v, &y_v);
-			
-			if(x_v == 0 && y_v == 0) break;
-
-			sprintf(final_val, "%.6f", query_sheet(s, x_v, y_v));
-
-			if(send(client_fd, final_val, strlen(final_val), 0) == -1)
-				perror("send");	
-
-		}
 
 	}
 	/**
@@ -262,73 +256,76 @@ float run_sheet(struct sheet *s, int x, int y) {
 
 void slave_compute() {
 	int len;
-	MPI_Status Stat;
+	MPI_Status stat;
 
 
-	MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
+	while (1) {
+	MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &stat);
 
-
+	}
 
 }
+
+void gen_minisheet(int start_x, float *s, float *minisheet) {
+	init i, j;
+	for(i = 0; i < 3; i++) {
+		for(j = 0; j < s->y; j++) {
+			minisheet[j + i * s->y] = s->prev_sheet[i+start_x][j];
+		}
+	}
+}
+
 /* STEP_SHEET()
    Moves the sheet one step forward in time
-*/
+   */
 void step_sheet(struct sheet *s){
-  int i, j, k, rank, numprocs, row_spot, col_spot, which_proc;
-  float delta = 0, big_delta = 0;
+	int i, j, k, num_proc, sent; 
+	float delta = 0, big_delta = 0;
+	float *full_row, row;
+	MPI_Status stat;
 
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
 
-
-
-
-	for(i = 1; i < numprocs; i++ ) {
-		MPI_Send(&s->x, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
-	}
 	/* Move curr sheet to prev sheet */
-	for(i=0; i < s->x; i++){
-		for(j=0; j < s->y; j++){
+	for(i = 0; i < s->x; i++){
+		for(j = 0; j < s->y; j++){
 			s->prev_sheet[i][j] = s->sheet[i][j];
 		}
 	}
 
-	if(numprocs > 0) {
-		float *full_row = xmalloc(sizeof(int) * s->x * 3);
-		which_proc = 0;
-		//Going through every row in the table
-		for(i = 0; i < s->y-2; i++) {
-			//For iterating through the 3 rows in a row. So, it should first be
-			//row 0, 1, 2, concatenated together.
-			for(j = 0; j < 3; j++) {
-				for(k = 0; k < s->x; k++) {
-					row_spot = j * s->x + k;
-					col_spot = j + i;
-					full_row[row_spot] = s->prev_sheet[k][col_spot];
-				}
+	/* Seed our initial proc's 
+	 *
+	 * XXX IMPORTANT SEE HOW MEMORY IS MANAGED IN MPI
+	 * CAN WE REUSE MEMORY?!?! WHEN WE SEND A MESSAGE, WHAT MEANS
+	 * TO MEMORY?!
+	 *
+	 * */
+	full_row = xmalloc(sizeof(float) * s->x * 3);
+	row = xmalloc(sizeof(float) * s->x);
+	map = xmalloc(sizeof(int) * num_proc);
 
-			}
-			which_proc++;
-			if(which_proc >= numprocs) {
-				which_proc = 1;
-			}
-			
-			MPI_Send(&full_row, 3*s->x, MPI_FLOAT, which_proc, 1, MPI_COMM_WORLD);
+	sent = 0;
 
-
-		}
-	} else {
-		for(i=1; i < (s->x-1); i++){
-			for(j=1; j < (s->y-1); j++){
-				s->sheet[i][j] = (s->prev_sheet[i][j]
-						+ s->prev_sheet[i-1][j]
-						+ s->prev_sheet[i][j-1]
-						+ s->prev_sheet[i+1][j]
-						+ s->prev_sheet[i][j+1]) / 5.0;
-
-			}
-		}
+	for (i = 1; i < num_proc; i++) {
+		gen_minisheet(sent, s, full_row);
+		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, i, WORK, MPI_COMM_WORLD);
+		sent++;
 	}
+
+	while (sent < s->y) {
+		MPI_Recv(&row, s->x, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+		/* code to add row to current sheet! */
+		/* Need a way to know what row is being sent back */
+		gen_minisheet(sent, s, full_row);
+		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
+		sent++;
+	}
+
+	free(map);
+	free(row);
+	free(full_row);
+
+
 	/**
 	 * We need to reset before we look for the largest change...
 	 */
@@ -410,44 +407,44 @@ struct sheet* init_sheet(int x_val, int y_val,
 		s->hps[i].t = heatpoints[i].t;
 	}
 
-  /* Initialize past and present sheets */
-  s->x = x_val + 2;
-  s->y = y_val + 2;
+	/* Initialize past and present sheets */
+	s->x = x_val + 2;
+	s->y = y_val + 2;
 
-  s->sheet = xmalloc(x_val*sizeof(float *));
-  s->prev_sheet = xmalloc(x_val*sizeof(float *));
+	s->sheet = xmalloc(x_val*sizeof(float *));
+	s->prev_sheet = xmalloc(x_val*sizeof(float *));
 
 
-  /*Initialize Values in past and present sheets*/
-  for(i = 0; i< s->x; i++){
-	s->sheet[i] = xmalloc(s->y*sizeof(float));
-	s->prev_sheet[i] = xmalloc(s->y*sizeof(float));
-    for(j = 0; j< s->y; j++){
-      s->sheet[i][j] = 0;
-      s->prev_sheet[i][j] = 0;
-    }
-  }
+	/*Initialize Values in past and present sheets*/
+	for(i = 0; i< s->x; i++){
+		s->sheet[i] = xmalloc(s->y*sizeof(float));
+		s->prev_sheet[i] = xmalloc(s->y*sizeof(float));
+		for(j = 0; j< s->y; j++){
+			s->sheet[i][j] = 0;
+			s->prev_sheet[i][j] = 0;
+		}
+	}
 
-  /* Insert constant heat values */
-  reset_sheet(s);
+	/* Insert constant heat values */
+	reset_sheet(s);
 
-  return s;
+	return s;
 }
 
 /* PRINT_SHEET()
    prints the matrix for debugging purposes
-*/
+   */
 void print_sheet(struct sheet *s){
-  int i,j;
+	int i,j;
 
-  for(i=0; i < s->x; i++){
-    for(j=0; j < s->y; j++){
-      printf("%f ", s->sheet[i][j]);
-    }
-    printf("\n");
-  }
+	for(i=0; i < s->x; i++){
+		for(j=0; j < s->y; j++){
+			printf("%f ", s->sheet[i][j]);
+		}
+		printf("\n");
+	}
 
-  printf("\n");
+	printf("\n");
 }
 
 /**
