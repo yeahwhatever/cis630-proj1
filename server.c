@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 		}
 
 	} else {
-		slave_compute();
+		row_worker();
 	}
 
 	status = listen_loop(socketfd);
@@ -258,56 +258,63 @@ void slave_compute() {
 	int len;
 	MPI_Status stat;
 
+	MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &stat);
 
 	while (1) {
-		MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &stat);
 
 	}
 
 }
 
-void row_worker(float data[], int l) {
-	int row_length = l, i;
+void row_worker() {
+	int row_length, i, cont = 1, tag;
 	float **sheet;
-	float *ret;
+	float *ret, *data;
+	MPI_Status stat;
+
+	MPI_Recv(&row_length, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &stat);
 
 	ret = xmalloc(row_length * sizeof(float));
 
 	sheet = xmalloc(3 * sizeof(float *));
 
-	if (tag == WORK) {
+	while(cont) {
+		MPI_Recv(&data,  row_length*3, MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &stat);
+		if (tag == WORK) {
 
-		for (i = 0; i < 3; i++)
-			sheet[i] = xmalloc(row_length * sizeof(float));
+			for (i = 0; i < 3; i++)
+				sheet[i] = xmalloc(row_length * sizeof(float));
 
 
-		for (i = 0; i < row_length; i++) {
-			sheet[0][i] = data[i];
-			sheet[1][i] = data[row_length + i];
-			sheet[2][i] = data[row_length * 2 + i];
+			for (i = 0; i < row_length; i++) {
+				sheet[0][i] = data[i];
+				sheet[1][i] = data[row_length + i];
+				sheet[2][i] = data[row_length * 2 + i];
+			}
+
+			ret[0] = 0;
+			ret[row_length - 1] = 0;
+
+			for (i = 1; i < row_length - 1; i++)
+				ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+i]) / 5.0;
+
+
+			/* send ret */
+
+		} else if (tag == DIE) {
+			free(ret);
+
+			for (i = 0; i < 3; i++)
+				free(sheet[i]);
+
+			free(sheet);
+			cont = 0;
 		}
-
-		ret[0] = 0;
-		ret[row_length - 1] = 0;
-
-		for (i = 1; i < row_length - 1; i++)
-			ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+i]) / 5.0;
-
-
-		/* send ret */
-
-	} else if (tag == DIE) {
-		free(ret);
-
-		for (i = 0; i < 3; i++)
-			free(sheet[i]);
-
-		free(sheet);
 	}
 }
 
-void gen_minisheet(int start_x, float *s, float *minisheet) {
-	init i, j;
+void gen_minisheet(int start_x, struct sheet *s, float *minisheet) {
+	int i, j;
 	for(i = 0; i < 3; i++) {
 		for(j = 0; j < s->y; j++) {
 			minisheet[j + i * s->y] = s->prev_sheet[i+start_x][j];
@@ -319,9 +326,9 @@ void gen_minisheet(int start_x, float *s, float *minisheet) {
    Moves the sheet one step forward in time
    */
 void step_sheet(struct sheet *s){
-	int i, j, k, num_proc, sent; 
+	int i, j, k, num_proc, sent, *map;
 	float delta = 0, big_delta = 0;
-	float *full_row, row;
+	float *full_row, *row;
 	MPI_Status stat;
 
 	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
@@ -356,7 +363,7 @@ void step_sheet(struct sheet *s){
 	while (sent < (s->y - 2)) {
 		MPI_Recv(&row, s->x, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
-			s->curr_sheet[map[stat.MPI_SOURCE]][i] = row[i];
+			s->sheet[map[stat.MPI_SOURCE]][i] = row[i];
 		}
 		gen_minisheet(sent, s, full_row);
 		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
