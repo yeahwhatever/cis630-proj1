@@ -253,20 +253,7 @@ float run_sheet(struct sheet *s, int x, int y) {
 }
 
 
-
 void slave_compute() {
-	int len;
-	MPI_Status stat;
-
-	MPI_Recv(&len, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &stat);
-
-	while (1) {
-
-	}
-
-}
-
-void row_worker() {
 	int row_length, i;
 	float **sheet;
 	float *ret, *data;
@@ -284,7 +271,7 @@ void row_worker() {
 	MPI_Type_contiguous(row_length, MPI_FLOAT, &recv_type);
 
 	while (1) {
-		MPI_Recv(&data,  row_length*3, MPI_FLOAT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+		MPI_Recv(&data, 1, send_type, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 		if (stat.MPI_TAG == WORK) {
 
 			for (i = 0; i < 3; i++)
@@ -304,7 +291,7 @@ void row_worker() {
 				ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+i]) / 5.0;
 
 
-			MPI_Send(&ret, row_length, MPI_FLOAT, 0, RETURN, MPI_COMM_WORLD);
+			MPI_Send(&ret, 1, recv_type, 0, RETURN, MPI_COMM_WORLD);
 
 		} else if (stat.MPI_TAG == DIE) {
 			free(ret);
