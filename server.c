@@ -267,7 +267,7 @@ void slave_compute() {
 }
 
 void row_worker() {
-	int row_length, i, cont = 1, tag;
+	int row_length, i, tag;
 	float **sheet;
 	float *ret, *data;
 	MPI_Status stat;
@@ -278,7 +278,7 @@ void row_worker() {
 
 	sheet = xmalloc(3 * sizeof(float *));
 
-	while(cont) {
+	while (1) {
 		MPI_Recv(&data,  row_length*3, MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &stat);
 		if (tag == WORK) {
 
@@ -308,7 +308,8 @@ void row_worker() {
 				free(sheet[i]);
 
 			free(sheet);
-			cont = 0;
+
+			return;
 		}
 	}
 }
