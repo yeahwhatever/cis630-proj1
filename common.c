@@ -43,7 +43,7 @@ char* mkJson_rand(int x, int y, int num_heat) {
 	char *tstr = xmalloc(512 * sizeof(char));
 	char* str = xmalloc((num_heat+1) * 512 * sizeof(char));
 
-	sprintf(tstr, "{ x: %d, y: %d, num_heat: %d, random} ", x, y, num_heat);
+	sprintf(tstr, "{ x: %d, y: %d, num_heat: %d, {random[]} ", x, y, num_heat);
 	strcat(str, tstr);
 	free(tstr);
 	printf("%s\n", str);
@@ -63,7 +63,7 @@ struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) 
 	struct heatpoint *hps;
 
 	getX = getY = getNum = hpCoords = 0;
-	while(json[i] != '}')
+	while(json[i] != '[' )
 	{
 		switch(json[i]) {
 			case 'x':

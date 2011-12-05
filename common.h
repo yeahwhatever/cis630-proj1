@@ -6,7 +6,7 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_HEAT 1000
+#define MAX_HEAT 2000
 #define MIN_HEAT -100
 
 struct heatpoint {

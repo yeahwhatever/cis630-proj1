@@ -100,9 +100,10 @@ int main(int argc, char *argv[]) {
 
 	status = listen_loop(socketfd);
 
+	freeaddrinfo(servinfo);
+
 	MPI_Finalize();
 	return status;
-	freeaddrinfo(servinfo);
 }
 
 int listen_loop(int socketfd) {
@@ -636,21 +637,22 @@ void print_sheet(struct sheet *s){
 void free_sheet(struct sheet *s) {
 	int i;
 
-	printf("1");
+
+	printf("FS 1\n");
 	free(s->hps);
-	printf("2");
-	for (i = 0; i< s->x; i++) {
-		printf("i: %d 7", i);
-		free(s->sheet[i]);
-		printf("i: %d 8", i);
+	printf("FS 2\n");
+	for (i = (s->x - 1); i > 0; i--) {
+		printf("FS i: %d 7\n", i);
 		free(s->prev_sheet[i]);
-		printf("i: %d 9", i);
+		printf("FS i: %d 8\n", i);
+		free(s->sheet[i]);
+		printf("FS i: %d 9\n", i);
 	}
-	printf("3");
-	free(s->sheet);
-	printf("4");
-	free(s->prev_sheet);
-	printf("5");
+	printf("FS 3\n");
+	/* free(s->sheet); */
+	printf("FS 4\n");
+	/* free(s->prev_sheet); */
+	printf("FS 5\n");
 	free(s);
-	printf("6");
+	printf("FS 6\n");
 }
