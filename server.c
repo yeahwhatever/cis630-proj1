@@ -271,16 +271,17 @@ void row_worker() {
 	float **sheet;
 	float *ret, *data;
 	MPI_Status stat;
-	MPI_Type send_type, recv_type;
+	MPI_Datatype send_type, recv_type;
 
-	MPI_Type_contiguous(3*s->x, MPI_FLOAT, &send_type);
-	MPI_Type_contiguous(s->x, MPI_FLOAT, &recv_type);
 
 	MPI_Recv(&row_length, 1, MPI_INT, 0, SIZE, MPI_COMM_WORLD, &stat);
 
 	ret = xmalloc(row_length * sizeof(float));
 
 	sheet = xmalloc(3 * sizeof(float *));
+
+	MPI_Type_contiguous(3 * row_length, MPI_FLOAT, &send_type);
+	MPI_Type_contiguous(row_length, MPI_FLOAT, &recv_type);
 
 	while (1) {
 		MPI_Recv(&data,  row_length*3, MPI_FLOAT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
