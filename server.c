@@ -313,7 +313,7 @@ void step_sheet(struct sheet *s){
 		sent++;
 	}
 
-	while (sent < s->y) {
+	while (sent < (s->y - 2)) {
 		MPI_Recv(&row, s->x, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
 			s->curr_sheet[map[stat.MPI_SOURCE]][i] = row[i];
