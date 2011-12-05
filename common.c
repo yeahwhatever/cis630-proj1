@@ -119,6 +119,47 @@ void parseJson_rand(char* json, int *width, int *height, int *num_heat) {
 				break;
 		}
 	}
+
+}
+
+
+struct heatpoint *make_random_heatpoints_or_whatever(int *width, int *height, int *num_heat) {
+
+  int i, heat_modulus, heat_shift;
+  struct heatpoint * hps;
+  
+  hps = xmalloc(sizeof(struct heatpoint) * *num_heat);
+
+  /* Making sure we actually generate values between MAX and MIN HEAT */
+  heat_modulus = 0;
+  heat_shift = 0;
+  if(MIN_HEAT < 0){
+    heat_shift = -1 * MIN_HEAT;
+    heat_modulus = -1 * MIN_HEAT;
+  }
+  else{
+    heat_shift = MIN_HEAT;
+    heat_modulus = MIN_HEAT;
+  }
+
+  if(MAX_HEAT < 0){
+    heat_modulus = heat_modulus + -1 * MAX_HEAT;
+  }
+  else{
+    heat_modulus = heat_modulus + MAX_HEAT;
+  }
+
+  /* Ok, back to stuff that matters */
+  for(i=0; i<*num_heat; i++){
+
+    hps[i].x = rand() % *width;
+    hps[i].y = rand() % *height;
+    hps[i].x = (rand() % heat_modulus) - heat_shift;
+
+  }
+
+  return hps;
+
 }
 
 struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) {
