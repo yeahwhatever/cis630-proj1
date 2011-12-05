@@ -331,6 +331,7 @@ void step_sheet(struct sheet *s){
 	float delta = 0, big_delta = 0;
 	float *full_row, *row;
 	MPI_Status stat;
+	MPI_Datatype send_type, recv_type;
 
 	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
 
@@ -352,32 +353,35 @@ void step_sheet(struct sheet *s){
 	row = xmalloc(sizeof(float) * s->x);
 	map = xmalloc(sizeof(int) * num_proc);
 
+	MPI_Type_contiguous(3*s->x, MPI_FLOAT, &send_type);
+	MPI_Type_contiguous(s->x, MPI_FLOAT, &recv_type);
+
 	sent = 0;
 
 	for (i = 1; i < num_proc; i++) {
 		gen_minisheet(sent, s, full_row);
-		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, i, WORK, MPI_COMM_WORLD);
+		MPI_Send(&full_row, 1, type, i, WORK, MPI_COMM_WORLD);
 		map[i] = sent;
 		sent++;
 	}
 
 	while (sent < (s->y - 2)) {
-		MPI_Recv(&row, s->x, MPI_FLOAT, MPI_ANY_SOURCE, RETURN, MPI_COMM_WORLD, &stat);
+		MPI_Recv(&row, 1, recv_type, MPI_ANY_SOURCE, RETURN, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
 			s->sheet[map[stat.MPI_SOURCE]][i] = row[i];
 		}
 		gen_minisheet(sent, s, full_row);
-		MPI_Send(&full_row, 3*s->x, MPI_FLOAT, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
+		MPI_Send(&full_row, 1, send_type, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
 		map[stat.MPI_SOURCE] = sent;
 		sent++;
 	}
 
 	for (i = 1; i < num_proc; i++) {
-		MPI_Recv(&row, s->x, MPI_FLOAT, i, RETURN, MPI_COMM_WORLD, &stat);
+		MPI_Recv(&row, 1, recv_type, i, RETURN, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
 			s->sheet[map[stat.MPI_SOURCE]][i] = row[i];
 		}
-		MPI_Send(&full_row, 0, MPI_FLOAT, stat.MPI_SOURCE, DIE, MPI_COMM_WORLD); 
+		MPI_Send(&full_row, 1, send_type, stat.MPI_SOURCE, DIE, MPI_COMM_WORLD); 
 	}
 
 	free(map);
