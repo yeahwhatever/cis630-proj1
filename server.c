@@ -341,9 +341,9 @@ void slave_compute() {
 				//printf("%2.2f ", ret[i]);
 			//printf("\n");
 
-			printf(".");
+			fprintf(stderr, ".");
 			MPI_Ssend(ret, 1, recv_type, 0, RETURN, MPI_COMM_WORLD);
-			printf(".");
+			fprintf(stderr, ".");
 
 		} else if (stat.MPI_TAG == DIE) {
 			//printf("In DIE statement\n");
@@ -638,21 +638,21 @@ void free_sheet(struct sheet *s) {
 	int i;
 
 
-	printf("FS 1\n");
+	/*printf("FS 1\n");*/
 	free(s->hps);
-	printf("FS 2\n");
+	/*printf("FS 2\n");*/
 	for (i = (s->x - 1); i > 0; i--) {
-		printf("FS i: %d 7\n", i);
+		/*printf("FS i: %d 7\n", i);*/
 		free(s->prev_sheet[i]);
-		printf("FS i: %d 8\n", i);
+		/*printf("FS i: %d 8\n", i);*/
 		free(s->sheet[i]);
-		printf("FS i: %d 9\n", i);
+		/*printf("FS i: %d 9\n", i);*/
 	}
-	printf("FS 3\n");
+	/*printf("FS 3\n");*/
 	/* free(s->sheet); */
-	printf("FS 4\n");
+	/*printf("FS 4\n");*/
 	/* free(s->prev_sheet); */
-	printf("FS 5\n");
+	/*printf("FS 5\n");*/
 	free(s);
-	printf("FS 6\n");
+	/*printf("FS 6\n");*/
 }
