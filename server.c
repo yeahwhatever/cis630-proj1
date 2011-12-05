@@ -88,7 +88,6 @@ int main(int argc, char *argv[]) {
 		}
 
 
-		freeaddrinfo(servinfo);
 
 		if (listen(socketfd, BACKLOG) == -1) {
 			perror("listen");
@@ -103,6 +102,7 @@ int main(int argc, char *argv[]) {
 
 	MPI_Finalize();
 	return status;
+	freeaddrinfo(servinfo);
 }
 
 int listen_loop(int socketfd) {
@@ -261,7 +261,7 @@ void slave_compute() {
 	MPI_Status stat;
 	MPI_Datatype send_type, recv_type;
 
-	//printf("Getting row_length\n");
+	printf("Getting row_length\n");
 	MPI_Recv(&row_length, 1, MPI_INT, 0, SIZE, MPI_COMM_WORLD, &stat);
 	//printf("Received row_length: %d\n", row_length);
 
@@ -280,11 +280,30 @@ void slave_compute() {
 		MPI_Recv(data, 1, send_type, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 		//printf("Received data\n");
 		if (stat.MPI_TAG == WORK) {
+	/*		printf("RECEIVED Statement\n");
+			for(i = 0; i < 10; i++) {
+				printf("%2.2f ", data[i]);
+			}
+			printf("\n");
 
+			for(i = 10; i < 20; i++) {
+				printf("%2.2f ", data[i]);
+			}
+			printf("\n");
+			for(i = 20; i < 30; i++) {
+				printf("%2.2f ", data[i]);
+			}
+			printf("\n");
+*/
+			printf("RECEIVED Statement\n");
+			for(i = 0; i < 36; i++) {
+				printf("%2.2f ", data[i]);
+			}
+			printf("\n");
 			for (i = 0; i < 3; i++)
 				sheet[i] = xmalloc(row_length * sizeof(float));
 
-
+			printf("row_length: %d\n", row_length);
 			for (i = 0; i < row_length; i++) {
 				sheet[0][i] = data[i];
 				sheet[1][i] = data[row_length + i];
@@ -295,10 +314,11 @@ void slave_compute() {
 			ret[row_length - 1] = 0;
 
 			for (i = 1; i < row_length - 1; i++)
-				ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+i]) / 5.0;
+				ret[i] = (sheet[0][i] + sheet[2][i] + sheet[1][i-1] + sheet[1][i] + sheet[1][i+1]) / 5.0;
 
 			//printf("Sending ret\n");
-			MPI_Send(ret, 1, recv_type, 0, RETURN, MPI_COMM_WORLD);
+			MPI_Ssend(ret, 1, recv_type, 0, RETURN, MPI_COMM_WORLD);
+			//printf("Sent ret\n");
 
 		} else if (stat.MPI_TAG == DIE) {
 			//printf("In DIE statement\n");
@@ -318,10 +338,12 @@ void slave_compute() {
 }
 
 void gen_minisheet(int start_x, struct sheet *s, float *minisheet) {
-	int i, j;
+	int i, j, k = 0;
 	for(i = 0; i < 3; i++) {
-		for(j = 0; j < s->y; j++) {
-			minisheet[j + i * s->y] = s->prev_sheet[i+start_x][j];
+		for(j = 0; j < s->x; j++) {
+			//minisheet[j + (i * s->x)] = s->prev_sheet[i+start_x][j];
+		//	printf("start_x: %d, j: %d, i: %d, k: %d\n",start_x, j, i, k);
+			minisheet[k++] = s->prev_sheet[i+start_x][j];
 		}
 	}
 }
@@ -362,30 +384,76 @@ void step_sheet(struct sheet *s){
 	MPI_Type_commit(&recv_type);
 
 	sent = 0;
-	//printf("Starting first loop with num_proc: %d\n", num_proc);
+	int k;
+	printf("----------------------------------------------------\n");
+	printf("Starting first loop with num_proc: %d\n", num_proc);
 	for (i = 1; i < num_proc; i++) {
+		printf("Printing prev_sheet at %d\n", sent);
+		for(j = sent; j < sent+3; j++) {
+			for(k = 0; k < 12; k++) {
+				printf("%2.2f ",s->prev_sheet[j][k]);
+
+			}
+		}
+		printf("\n");
+
+
+		for(j = 0; j < s->x * 3; j++) {
+			full_row[j] = 0.0;
+		}
 		gen_minisheet(sent, s, full_row);
-		MPI_Send(full_row, 1, send_type, i, WORK, MPI_COMM_WORLD);
+
+		printf("AFTER Gen_minisheet at %d\n", sent);
+		for(j = 0; j < 10; j++) {
+			printf("%2.2f ", full_row[j]);
+		}
+		printf("\n");
+		for(j = 10; j < 20; j++) {
+			printf("%2.2f ", full_row[j]);
+		}
+		printf("\n");
+		for(j = 20; j < 30; j++) {
+			printf("%2.2f ", full_row[j]);
+		}
+		printf("\n");
+		for(j = 0; j < 36; j++) {
+			printf("%2.2f ", full_row[j]);
+		}
+		printf("\n");
+		
+		MPI_Ssend(full_row, 1, send_type, i, WORK, MPI_COMM_WORLD);
 		map[i] = sent;
 		sent++;
 	}
 
-	//printf("Starting second loop\n");
+	printf("Starting second loop\n");
 	while (sent < (s->y - 2)) {
+		//printf("*** Received data\n");
 		MPI_Recv(row, 1, recv_type, MPI_ANY_SOURCE, RETURN, MPI_COMM_WORLD, &stat);
 		for (i = 0; i < s->x; i++) {
 			s->sheet[map[stat.MPI_SOURCE]][i] = row[i];
 		}
 		gen_minisheet(sent, s, full_row);
-		MPI_Send(full_row, 1, send_type, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
+		//printf("*** Sending new row\n");
+		MPI_Ssend(full_row, 1, send_type, stat.MPI_SOURCE, WORK, MPI_COMM_WORLD); 
+		//printf("*** Sent new row\n");
 		map[stat.MPI_SOURCE] = sent;
+		//printf("*** mapped!\n");
+		//printf("*** sent: %d\n", sent);
 		sent++;
 	}
 
-	//printf("starting third loop\n");
+	for(i = 0; i < num_proc; i++) {
+		//printf("map %d: %d\n", i, map[i]);
+	}
+	printf("starting third loop\n");
 	for (i = 1; i < num_proc; i++) {
+		//printf("* Receiving row in 3rd loop\n");
+		//printf("* sent: %d\n", sent);
 		MPI_Recv(row, 1, recv_type, i, RETURN, MPI_COMM_WORLD, &stat);
+		//printf("* Received row in 3rd loop\n");
 		for (j = 0; j < s->x; j++) {
+			//printf("j: %d\n", j);
 			s->sheet[map[stat.MPI_SOURCE]][j] = row[j];
 		}
 		//printf("Sending full_row\n");
@@ -393,31 +461,43 @@ void step_sheet(struct sheet *s){
 		//printf("Sent full_row\n");
 	}
 
+	//printf("Freeing map\n");
 	free(map);
+	//printf("Freeing row\n");
 	free(row);
+	//printf("Freeing full_row\n");
 	free(full_row);
+	//printf("Freed full_row\n");
 
 
-	printf("400, 400: %f\n", s->sheet[400][400]);
+	//printf("400, 400: %f\n", s->sheet[400][400]);
 	/**
 	 * We need to reset before we look for the largest change...
 	 */
 	reset_sheet(s);
+	//printf("40 40: %f\n", s->sheet[41][41]);
 
 	/**
 	 * Get the largest change in the sheet and test if its smaller than our
 	 * terminate case, if it is we set our finished flag.
 	 */
+	int ti, tj;
+	ti = tj = 0;
 	for(i=1; i < (s->x-1); i++){
 		for(j=1; j < (s->y-1); j++){
 			delta = s->sheet[i][j] - s->prev_sheet[i][j];
-			if (delta > big_delta)
+			if (delta > big_delta) {
+				ti = i;
+				tj = j;
 				big_delta = delta;
+			}
 		}
 	}
 
-	if (big_delta < DELTA_TERMINATE)
+	if (big_delta < DELTA_TERMINATE) {
 		s->checked = 1;
+		printf("Stopping at %d, %d\n",ti,tj);
+	}
 
 }
 
@@ -503,7 +583,7 @@ struct sheet* init_sheet(int x_val, int y_val,
 	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
 
 	for(i = 1; i < num_proc; i++) { 
-		MPI_Send(&(s->x), 1, MPI_INT, i, SIZE, MPI_COMM_WORLD); 
+		MPI_Ssend(&(s->x), 1, MPI_INT, i, SIZE, MPI_COMM_WORLD); 
 	}
 
 	return s;
