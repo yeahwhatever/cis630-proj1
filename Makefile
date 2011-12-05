@@ -9,11 +9,11 @@ LL =
 
 all: client server
 
-client: client.c 
+client: client.c  client.h common.c common.h
 		$(CC) client.c common.c $(LL) $(CFLAGS) -o client
 
-server: server.c
+server: server.c server.h common.c common.h
 		$(CC) server.c common.c $(LL) $(CFLAGS) -o server
 
 clean:
-		rm -rf *.o *.core client server 
+		rm -rf *.o *.core client server

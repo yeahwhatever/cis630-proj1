@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
 int recv_loop(int socketfd) {
 	char buf[LINE], *json;
-	int i, numbytes;
+	int i, numbytes, random_hps;
 
 	int x, y, query_x, query_y, num_heat;
 	struct heatpoint *hps;
@@ -117,42 +117,76 @@ int recv_loop(int socketfd) {
 			printf("X: %d Y: %d\n", x, y);
 #endif
 
-			printf("Enter number of heat sources: \n");
-			fgets(buf, LINE, stdin);
-			num_heat = atoi(buf);
+			num_heat = 0;
+			do{
+			  printf("Enter number of heat sources: \n");
+			  fgets(buf, LINE, stdin);
+			  num_heat = atoi(buf);
+			  if (num_heat < 1) {
+			    fprintf(stderr, 
+				    "Number of heat sources must be greater than zero\n");
+			  }
+			}
+			while(num_heat < 1);
 
+			/* This is not an actual rule
 			if (num_heat < 4 || num_heat > 20) {
 				fprintf(stderr, "Number of heat sources must be 4 <= num heat <= 20\n");
 				return 7;
 			}
+			*/
+			
 
 			hps = xmalloc(num_heat * sizeof (struct heatpoint));
 
-			for (i = 0; i < num_heat; i++) {
-				fgets(buf, LINE, stdin);
+			/* Type in 'random' to get randomly generated heatpoints */
+			i=0;
+			random_hps=0;
+			do{
+			  /* Collect heat point info unless we see the word 'random' */
+			  fgets(buf, LINE, stdin);
 
-				parse_three(buf, &(hps[i].x), &(hps[i].y), &(hps[i].t));
+			  if(strcmp(buf,"random\n") != 0){
+			    parse_three(buf, &(hps[i].x), &(hps[i].y), &(hps[i].t));
 #if DEBUG > 0
-				printf("HP X: %d HP Y: %d HP T: %f\n", hps[i].x, hps[i].y, hps[i].t);
+			    printf("HP X: %d HP Y: %d HP T: %f\n", hps[i].x, hps[i].y, hps[i].t);
 #endif
+			    
+			    if (hps[i].x < 0 || hps[i].x > x) {
+			      fprintf(stderr, "Heat point x coordinate is not on grid\n");
+			      return 8;
+			    }
+			    
+			    if (hps[i].y < 0 || hps[i].y > y) {
+			      fprintf(stderr, "Heat point y coordinate is not on grid\n");
+			      return 9;
+			    }
+			    
+			    if (hps[i].t < MIN_HEAT || hps[i].t > MAX_HEAT) {
+			      fprintf(stderr, 
+				      "Heat point temperature must be %d <= t <= %d\n",
+				      MIN_HEAT,
+				      MAX_HEAT);
+			      return 10;
+			    }
+			    
+			    i++;
+			  }
+			  else{
+			    /* Set flag for random hps */
+			    random_hps=1;
+			    i = num_heat;
+			  }
 
-				if (hps[i].x < 0 || hps[i].x > x) {
-					fprintf(stderr, "Heat point x coordinate is not on grid\n");
-					return 8;
-				}
+			}while(i < num_heat);
 
-				if (hps[i].y < 0 || hps[i].y > y) {
-					fprintf(stderr, "Heat point y coordinate is not on grid\n");
-					return 9;
-				}
-
-				if (hps[i].t < -100 || hps[i].t > 1500) {
-					fprintf(stderr, "Heat point temperature must be -100 <= t <= 500\n");
-					return 10;
-				}
+			if(random_hps){
+			  json = mkJson_rand(x,y,num_heat);
+			}
+			else{
+			  json = mkJson(x,y,num_heat, hps);
 			}
 
-			json = mkJson(x,y,num_heat, hps);
 #if DEBUG > 0
 			for (i = 0; i < num_heat; i++)
 				printf("x: %d y:%d t:%f\n", hps[i].x, hps[i].y, hps[i].t);
