@@ -5,7 +5,7 @@
 
 int listen_loop(int);
 
-#define DELTA_TERMINATE 0.1
+#define DELTA_TERMINATE 0.05
 #define WORK 1
 #define DIE 0
 #define SIZE 1
