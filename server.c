@@ -240,7 +240,7 @@ float run_sheet(struct sheet *s, int x, int y) {
 
 	if(!s->checked) {
 		for (i = 0; i < 5000 && !(s->checked); i++) {
-			printf("Stepping sheet at %d\n", i);
+		  //printf("Stepping sheet at %d\n", i);
 			step_sheet(s);
 		}
 
