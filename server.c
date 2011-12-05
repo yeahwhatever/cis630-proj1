@@ -453,7 +453,7 @@ void reset_sheet(struct sheet *s){
    */
 struct sheet* init_sheet(int x_val, int y_val, 
 		struct heatpoint * heatpoints, int num_heatpoints){
-	int i, j;
+	int i, j, num_proc;
 
 	struct sheet *s = xmalloc(sizeof(struct sheet));
 
@@ -486,6 +486,11 @@ struct sheet* init_sheet(int x_val, int y_val,
 
 	/* Insert constant heat values */
 	reset_sheet(s);
+	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
+
+	for(i = 1; i < num_proc; i++) { 
+		MPI_Send(&(s->x), 1, MPI_INT, i, SIZE, MPI_COMM_WORLD); 
+	}
 
 	return s;
 }
