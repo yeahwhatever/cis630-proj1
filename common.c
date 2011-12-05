@@ -41,10 +41,84 @@ char* mkJson(int x, int y, int num_heat, struct heatpoint *hps ) {
 	return str;
 }	
 
+char* mkJson_rand(int x, int y, int num_heat) {
+	char *tstr = xmalloc(512 * sizeof(char));
+	char* str = xmalloc((num_heat+1) * 512 * sizeof(char));
+
+	sprintf(tstr, "{ x: %d, y: %d, num_heat: %d} ", x, y, num_heat);
+	strcat(str, tstr);
+	free(tstr);
+	printf("%s\n", str);
+	return str;
+
+}
+
 char* mkJsonQuery(int x, int y) {
 	char* str = xmalloc(512 * sizeof(char));
 	sprintf(str, "{ x: %d, y: %d, }", x, y);
 	return str;
+}
+
+void parseJson_rand(char* json, int *width, int *height, int *num_heat) {
+	int i = 1, nstart;
+	char getX, getY, getNum, *numStr;
+
+	getX = getY = getNum = 0;
+	while(json[i] != '}')
+	{
+		switch(json[i]) {
+			case 'x':
+				getX = 1;
+				i++;
+				break;
+			case 'y':
+				getY = 1;
+				i++;
+				break;
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				nstart = i;
+				while(json[i] != ' ' ) {
+					i++;
+				}
+				numStr = xmalloc(i-nstart);
+				strncpy(numStr, json+nstart, i-nstart-1);
+				numStr[i-nstart-1] = '\0';
+				if(getX) {
+					*width = atoi(numStr);
+					getX = 0;
+				}
+				if(getY) {
+					*height = atoi(numStr);
+					getY = 0;
+				}
+				if(getNum) {
+			       		*num_heat = atoi(numStr);	       
+					getNum = 0;
+				}
+				free(numStr);
+				break;
+
+			case 'n':
+				if(strncmp(json+i, "num_heat", 8) == 0) {
+					i += 8;
+					getNum = 1;
+				}
+				i++;
+				break;
+			default:
+				i++;
+				break;
+		}
+	}
 }
 
 struct heatpoint *parseJson(char* json, int *width, int *height, int *num_heat) {
