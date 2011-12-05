@@ -267,7 +267,7 @@ void slave_compute() {
 }
 
 void row_worker() {
-	int row_length, i, tag;
+	int row_length, i;
 	float **sheet;
 	float *ret, *data;
 	MPI_Status stat;
@@ -279,8 +279,8 @@ void row_worker() {
 	sheet = xmalloc(3 * sizeof(float *));
 
 	while (1) {
-		MPI_Recv(&data,  row_length*3, MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &stat);
-		if (tag == WORK) {
+		MPI_Recv(&data,  row_length*3, MPI_FLOAT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+		if (stat.MPI_TAG == WORK) {
 
 			for (i = 0; i < 3; i++)
 				sheet[i] = xmalloc(row_length * sizeof(float));
@@ -301,7 +301,7 @@ void row_worker() {
 
 			/* send ret */
 
-		} else if (tag == DIE) {
+		} else if (stat.MPI_TAG == DIE) {
 			free(ret);
 
 			for (i = 0; i < 3; i++)
@@ -327,7 +327,7 @@ void gen_minisheet(int start_x, struct sheet *s, float *minisheet) {
    Moves the sheet one step forward in time
    */
 void step_sheet(struct sheet *s){
-	int i, j, k, num_proc, sent, *map;
+	int i, j, num_proc, sent, *map;
 	float delta = 0, big_delta = 0;
 	float *full_row, *row;
 	MPI_Status stat;
