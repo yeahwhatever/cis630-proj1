@@ -1,0 +1,12 @@
+Rank: 0, Numprocs: 2
+Rank: 1, Numprocs: 2
+Getting row_length
+Received:
+{ x: 2000, y: 500, num_heat: 5, {random[]} 
+x: 1608, y: 462, t: 1609.580444
+x: 1737, y: 36, t: 494.625244
+x: 1978, y: 53, t: 911.046692
+x: 73, y: 249, t: 834.611877
+x: 716, y: 201, t: 1753.019043
+Received row_length: 2002
+Received query (250, 250)

@@ -1,0 +1,7 @@
+Enter 'X Y' dimension of surface: 
+Enter number of heat sources: 
+{ x: 1000, y: 1000, num_heat: 5, {random[]} 
+Point ('X Y') to query?
+Result: 0.000000
+Point ('X Y') to query?
+Execution time: ~4534 seconds

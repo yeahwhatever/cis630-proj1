@@ -1,0 +1,15 @@
+Rank: 0, Numprocs: 2
+Rank: 1, Numprocs: 2
+Getting row_length
+Received:
+{ x: 50, y: 50, num_heat: 5, {random[]} 
+x: 36, y: 35, t: 1656.666138
+x: 29, y: 31, t: 1963.253784
+x: 22, y: 44, t: 344.476654
+x: 22, y: 41, t: 1225.261475
+x: 44, y: 29, t: 1382.693848
+Received row_length: 52
+Received query (25, 25)
+Stopping at 23, 21
+Finished after 1254 iterations
+Target (25,25) terminated with value 684.300171
