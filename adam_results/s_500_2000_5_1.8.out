@@ -1,0 +1,30 @@
+Rank: 0, Numprocs: 8
+Rank: 1, Numprocs: 8
+Getting row_length
+Rank: 2, Numprocs: 8
+Getting row_length
+Rank: 6, Numprocs: 8
+Getting row_length
+Rank: 3, Numprocs: 8
+Getting row_length
+Rank: 4, Numprocs: 8
+Getting row_length
+Rank: 5, Numprocs: 8
+Getting row_length
+Rank: 7, Numprocs: 8
+Getting row_length
+Received:
+{ x: 2000, y: 500, num_heat: 5, {random[]} 
+x: 474, y: 20, t: 1956.617188
+x: 1697, y: 49, t: 899.675720
+x: 1963, y: 423, t: -79.301903
+x: 1601, y: 448, t: 1228.673340
+x: 1556, y: 302, t: 1796.413818
+Received row_length: 2002
+Received row_length: 2002
+Received row_length: 2002
+Received row_length: 2002
+Received row_length: 2002
+Received row_length: 2002
+Received row_length: 2002
+Received query (250, 250)

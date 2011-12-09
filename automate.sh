@@ -6,7 +6,7 @@ PORT=5001
 for TRIAL in 1 2 3 4 5 
 do
 
-for NUMPROCS in 2 4 8
+for NUMPROCS in 8 # 2 4
 do
 
 ##################################################################

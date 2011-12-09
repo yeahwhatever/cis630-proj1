@@ -1,7 +1,7 @@
 Enter 'X Y' dimension of surface: 
 Enter number of heat sources: 
-{ x: 50, y: 50, num_heat: 5, {random[]} 
+{ x: 1000, y: 1000, num_heat: 10, {random[]} 
 Point ('X Y') to query?
-Result: 247.601761
+Result: 0.000002
 Point ('X Y') to query?
-Execution time: ~5 seconds
+Execution time: ~5794 seconds

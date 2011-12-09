@@ -1,7 +1,34 @@
-Rank: 2, Numprocs: 4
+Rank: 7, Numprocs: 8
 Getting row_length
-Rank: 0, Numprocs: 4
-Rank: 1, Numprocs: 4
+Rank: 2, Numprocs: 8
 Getting row_length
-Rank: 3, Numprocs: 4
+Rank: 3, Numprocs: 8
 Getting row_length
+Rank: 5, Numprocs: 8
+Getting row_length
+Rank: 0, Numprocs: 8
+Rank: 4, Numprocs: 8
+Rank: 1, Numprocs: 8
+Getting row_length
+Rank: 6, Numprocs: 8
+Getting row_length
+Getting row_length
+Received:
+{ x: 50, y: 50, num_heat: 5, {random[]} 
+x: 8, y: 11, t: 1239.450439
+x: 20, y: 0, t: -99.333336
+x: 12, y: 10, t: 1171.185181
+x: 25, y: 15, t: 987.151917
+x: 6, y: 1, t: 900.968079
+Received row_length: 52
+Received row_length: 52
+Received row_length: 52
+Received row_length: 52
+Received row_length: 52
+Received row_length: 52
+Received row_length: 52
+Received query (25, 25)
+Stopping at 24, 28
+Finished after 960 iterations
+Target (25,25) terminated with value 247.601761
+8 total processes killed (some possibly by mpirun during cleanup)
