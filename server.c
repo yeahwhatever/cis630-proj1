@@ -241,7 +241,7 @@ float run_sheet(struct sheet *s, int x, int y) {
 
 	if(!s->checked) {
 		for (i = 0; i < 5000 && !(s->checked); i++) {
-			//printf("Stepping sheet at %d\n", i);
+			printf("Stepping sheet at %d\n", i);
 			step_sheet(s);
 		}
 
@@ -392,7 +392,7 @@ void step_sheet(struct sheet *s){
 		}
 	}
 
-	if (num_proc != 0) {
+	if (num_proc > 1) {
 		MPI_Type_contiguous(3*s->x, MPI_FLOAT, &send_type);
 		MPI_Type_contiguous(s->x, MPI_FLOAT, &recv_type);
 		MPI_Type_commit(&send_type);
