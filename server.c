@@ -392,23 +392,16 @@ void step_sheet(struct sheet *s){
 		}
 	}
 
-	/* Seed our initial proc's 
-	 *
-	 * XXX IMPORTANT SEE HOW MEMORY IS MANAGED IN MPI
-	 * CAN WE REUSE MEMORY?!?! WHEN WE SEND A MESSAGE, WHAT MEANS
-	 * TO MEMORY?!
-	 *
-	 * */
-	full_row = xmalloc(sizeof(float) * s->x * 3);
-	row = xmalloc(sizeof(float) * s->x);
-	map = xmalloc(sizeof(int) * num_proc);
-
-	MPI_Type_contiguous(3*s->x, MPI_FLOAT, &send_type);
-	MPI_Type_contiguous(s->x, MPI_FLOAT, &recv_type);
-	MPI_Type_commit(&send_type);
-	MPI_Type_commit(&recv_type);
-
 	if (num_proc != 0) {
+		MPI_Type_contiguous(3*s->x, MPI_FLOAT, &send_type);
+		MPI_Type_contiguous(s->x, MPI_FLOAT, &recv_type);
+		MPI_Type_commit(&send_type);
+		MPI_Type_commit(&recv_type);
+
+		full_row = xmalloc(sizeof(float) * s->x * 3);
+		row = xmalloc(sizeof(float) * s->x);
+		map = xmalloc(sizeof(int) * num_proc);
+
 		sent = 0;
 		int k;
 		//printf("--------------------------------------------------\n");
@@ -527,6 +520,8 @@ void step_sheet(struct sheet *s){
 
 			}
 		}
+
+		reset_sheet(s);
 	}
 
 	if (big_delta < DELTA_TERMINATE) {
