@@ -494,21 +494,6 @@ void step_sheet(struct sheet *s){
 		/**
 		 * We need to reset before we look for the largest change...
 		 */
-		reset_sheet(s);
-		//printf("40 40: %f\n", s->sheet[41][41]);
-
-		/**
-		 * Get the largest change in the sheet and test if its smaller than our
-		 * terminate case, if it is we set our finished flag.
-		 */
-		for(i=1; i < (s->x-1); i++){
-			for(j=1; j < (s->y-1); j++){
-				delta = s->sheet[i][j] - s->prev_sheet[i][j];
-				if (delta > big_delta) {
-					big_delta = delta;
-				}
-			}
-		}
 	} else {
 		for(i=1; i < (s->x-1); i++){
 			for(j=1; j < (s->y-1); j++){
@@ -521,8 +506,21 @@ void step_sheet(struct sheet *s){
 			}
 		}
 
-		reset_sheet(s);
 	}
+	/**
+	 * Get the largest change in the sheet and test if its smaller than our
+	 * terminate case, if it is we set our finished flag.
+	 */
+	for(i=1; i < (s->x-1); i++){
+		for(j=1; j < (s->y-1); j++){
+			delta = s->sheet[i][j] - s->prev_sheet[i][j];
+			if (delta > big_delta) {
+				big_delta = delta;
+			}
+		}
+	}
+
+	reset_sheet(s);
 
 	if (big_delta < DELTA_TERMINATE) {
 		s->checked = 1;
